@@ -198,7 +198,15 @@ mcp-iot-poc/
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `get_current_weather` | Current conditions | None |
-| `get_forecast` | Hourly forecast | `hours` (1-48, default 12) |
+| `get_forecast` | Hourly forecast | `hours` (integer 1-48, default 12) |
+
+**Input Validation:**
+The `get_forecast` tool includes robust input validation for the `hours` parameter:
+- Handles malformed types (lists, strings, objects) gracefully
+- Falls back to default (12 hours) with warning log
+- Clamps values to valid range (1-48)
+
+This prevents LLM tool-calling quirks from causing errors (e.g., when the model passes a list instead of an integer).
 
 **Example response:**
 ```json
@@ -295,7 +303,14 @@ The agent is instructed to:
 - Be predictive (pre-heat before cold snaps)
 - Explain reasoning for all decisions
 
-See `config/system_prompt.md` for full prompt.
+**Critical Tool Calling Rules** (to prevent LLM quirks):
+- Call each tool only ONCE per evaluation
+- Only use parameters defined in the tool schema
+- Do NOT invent or hallucinate parameters
+- If changing temperature, MUST call `set_thermostat_temperature`
+- If NOT changing, do NOT call `set_thermostat_temperature`
+
+See `agent/src/climate_agent/main.py` for the full system prompt.
 
 ## 🐛 Troubleshooting
 
@@ -391,6 +406,14 @@ When demoing this project:
 - AI agents can reason about tradeoffs, not just follow rules
 - Local LLMs (Ollama) make this practical and private
 - The comparison feature proves the value objectively
+
+**Small Model Quirks (llama3.1:8b):**
+> "The 8B model works but sometimes gets confused with tool parameters. In production, you'd want input validation (which we have!) and possibly a larger model like qwen2.5:14b. This shows why model selection matters for agentic tasks."
+
+Observable behaviors to point out:
+- Duplicate tool calls with invented parameters
+- Saying it will do something but not actually calling the tool
+- Passing wrong types (e.g., list instead of integer)
 
 ## 🔮 Future Enhancements
 

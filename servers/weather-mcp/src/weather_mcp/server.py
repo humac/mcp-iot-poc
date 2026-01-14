@@ -153,6 +153,23 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         
         elif name == "get_forecast":
             hours = arguments.get("hours", 12)
+
+            # Input validation: handle malformed 'hours' parameter
+            # LLMs sometimes pass lists, strings, or other types instead of int
+            if isinstance(hours, list):
+                logger.warning(f"Received list for 'hours' parameter: {hours}, using default 12")
+                hours = 12
+            elif isinstance(hours, str):
+                try:
+                    hours = int(hours)
+                except ValueError:
+                    logger.warning(f"Could not parse 'hours' string: {hours}, using default 12")
+                    hours = 12
+            elif not isinstance(hours, (int, float)):
+                logger.warning(f"Invalid type for 'hours': {type(hours)}, using default 12")
+                hours = 12
+
+            hours = int(hours)  # Ensure integer
             hours = max(1, min(48, hours))  # Clamp to valid range
             
             data = await fetch_weather(hours=hours)

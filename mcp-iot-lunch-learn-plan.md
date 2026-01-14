@@ -281,10 +281,44 @@ You are an energy optimization agent for a home in Ottawa, Canada.
 ### Demo Scenarios to Prepare
 
 1. **Status Check**: Agent reports current state, decides no change needed
-2. **Pre-heating**: Cold front coming, agent pre-heats proactively  
+2. **Pre-heating**: Cold front coming, agent pre-heats proactively
 3. **Energy Saving**: Warm sunny day, agent lowers setpoint
 4. **Night Setback**: Evening check, agent reduces for overnight
 5. **Override Recovery**: Manual change detected, agent adapts
+
+### Demo Talking Points: AI vs Rule-Based Automation
+
+**Key Example: Nighttime Override**
+When it's after 10pm, the baseline rule says: "It's nighttime → set to 18°C". That's all it considers.
+
+But the AI looked at the *actual conditions*:
+- Indoor temp: 22.3°C
+- Current setpoint: 22°C
+- Outdoor temp: -3.2°C (feels like -8.4°C)
+- Forecast: Dropping to -13.8°C by midnight
+
+**AI's reasoning:** "The house is at 22°C. If I drop to 18°C right now with a cold front coming, the furnace will have to work hard later tonight to recover. Better to let the house naturally cool down gradually rather than forcing a 4-degree drop right before temps plummet."
+
+**Why this is smarter:**
+- Baseline: Drop 22°C → 18°C immediately at 10pm → house cools rapidly → at midnight when it's -14°C outside, furnace kicks in hard = more energy
+- AI: Keep setpoint, let house coast down naturally → furnace maintains from a warmer starting point = less energy
+
+**Highlight for audience:** "The AI overrode the rigid schedule because it considered the forecast. That's the difference between rule-based automation and contextual AI reasoning."
+
+### Small Model Quirks (llama3.1:8b)
+
+**Good talking point for the demo:**
+> "The 8B model works but sometimes gets confused with tool parameters. You'll notice it occasionally calls tools twice or hallucinates arguments that don't exist. In production, you'd want input validation and possibly a larger model like qwen2.5:14b. This shows why model selection matters for agentic tasks."
+
+**Observed behaviors:**
+- Duplicate tool calls with invented parameters
+- Saying it will do something but not actually calling the tool
+- Passing wrong types (e.g., list instead of integer for `hours`)
+
+**This is actually a feature for the demo** - it shows real-world LLM behavior and the importance of:
+1. Input validation in your MCP servers
+2. Logging to understand what the agent actually did
+3. Model selection for production deployments
 
 ### Milestone Checkpoint
 ✅ Agent running autonomously, making logged decisions every 30 minutes
