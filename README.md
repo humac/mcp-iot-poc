@@ -1,4 +1,4 @@
-# MCP IoT Demo: AI-Powered Thermostat Control
+# MCP IoT POC: AI-Powered Thermostat Control
 
 An autonomous AI agent that uses weather forecasts to make intelligent thermostat decisions. Built using the **Model Context Protocol (MCP)** to demonstrate agentic AI with IoT integration.
 
