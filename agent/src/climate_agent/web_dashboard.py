@@ -145,12 +145,12 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
     current_state = None
     if decisions and decisions[0].get("thermostat_state"):
         ts = decisions[0]["thermostat_state"]
-        ws = decisions[0].get("weather_data", {})
+        ws = decisions[0].get("weather_data") or {}  # Handle None case
         current_state = {
             "current_temp": ts.get("current_temperature", "?"),
             "target_temp": ts.get("target_temperature", "?"),
             "hvac_mode": ts.get("hvac_mode", "?"),
-            "outside_temp": ws.get("temperature_c", "?"),
+            "outside_temp": ws.get("temperature_c", "?") if ws else "?",
         }
     
     # Build HTML
