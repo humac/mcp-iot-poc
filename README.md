@@ -85,8 +85,8 @@ Both MCP servers implement the standard protocol with HTTP+SSE transport:
 ### 1. Clone and Configure
 
 ```bash
-git clone <repo-url> mcp-iot-demo
-cd mcp-iot-demo
+git clone <repo-url> mcp-iot-poc
+cd mcp-iot-poc
 
 # Copy environment template
 cp .env.example .env
@@ -151,7 +151,7 @@ open http://localhost:8080
 ## 📁 Project Structure
 
 ```
-mcp-iot-demo/
+mcp-iot-poc/
 ├── docker-compose.yml          # Container orchestration
 ├── .env.example                # Configuration template
 ├── README.md                   # This file

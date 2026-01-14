@@ -383,7 +383,7 @@ curl http://10.0.30.3:11434/api/chat -d '{
 ## Code Repository Structure
 
 ```
-mcp-iot-demo/
+mcp-iot-poc/
 ├── README.md
 ├── docker-compose.yml
 ├── .env.example                    # HA_TOKEN, etc.
@@ -530,8 +530,8 @@ volumes:
 ssh user@10.0.30.3
 
 # Clone repo (once created)
-git clone <your-repo-url> mcp-iot-demo
-cd mcp-iot-demo
+git clone <your-repo-url> mcp-iot-poc
+cd mcp-iot-poc
 
 # Copy env file and add your HA token
 cp .env.example .env
