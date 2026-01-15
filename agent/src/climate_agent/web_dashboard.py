@@ -1531,10 +1531,42 @@ async def api_chat_send(request: Request):
         if not agent.initialized:
             # Try to initialize on-demand
             chat_logger.info("Agent not initialized, attempting initialization...")
+
+            # Check individual components for better error messages
+            errors = []
+
+            # Check Ollama
+            try:
+                ollama_ok = await agent.ollama.health_check()
+                if not ollama_ok:
+                    errors.append("Ollama not responding")
+            except Exception as e:
+                errors.append(f"Ollama error: {e}")
+
+            # Check Weather MCP
+            try:
+                weather_ok = await agent.weather_client.health_check()
+                if not weather_ok:
+                    errors.append("Weather MCP not responding")
+            except Exception as e:
+                errors.append(f"Weather MCP error: {e}")
+
+            # Check HA MCP
+            try:
+                ha_ok = await agent.ha_client.health_check()
+                if not ha_ok:
+                    errors.append("Home Assistant MCP not responding")
+            except Exception as e:
+                errors.append(f"HA MCP error: {e}")
+
+            if errors:
+                return {"error": f"Agent cannot initialize. Issues: {'; '.join(errors)}"}
+
+            # All health checks passed, try full initialization
             try:
                 success = await agent.initialize()
                 if not success:
-                    return {"error": "Agent failed to initialize. Check that MCP servers (weather-mcp, homeassistant-mcp) and Ollama are running."}
+                    return {"error": "Agent initialization failed despite healthy services. Check agent logs."}
             except Exception as init_error:
                 chat_logger.error(f"Initialization error: {init_error}")
                 return {"error": f"Agent initialization failed: {str(init_error)}"}
