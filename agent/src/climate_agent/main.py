@@ -118,7 +118,7 @@ class BaselineAutomation:
 - Deadband: ±0.5°C (no change if within range)"""
 
 # System prompt for the agent
-SYSTEM_PROMPT = """IMPORTANT: You MUST respond in English only. All output must be in English.
+DEFAULT_SYSTEM_PROMPT = """IMPORTANT: You MUST respond in English only. All output must be in English.
 
 You are an energy optimization agent for a home in Ottawa, Canada.
 
@@ -170,6 +170,10 @@ Be concise. Focus on the key factors that influenced your decision.
 
 REMINDER: Always respond in English. Do not use Chinese or any other language."""
 
+DEFAULT_USER_PROMPT = """Evaluate the current weather and thermostat state. 
+Decide if any adjustments should be made to optimize comfort and energy efficiency.
+Gather all necessary data first, then make your decision."""
+
 
 class ClimateAgent:
     """Main agent class that orchestrates the climate control loop."""
@@ -206,6 +210,19 @@ class ClimateAgent:
         self.initialized = True
         logger.info("Climate Agent initialized successfully")
         return True
+
+    async def ensure_prompts(self):
+        """Ensure default prompts exist in DB."""
+        await self.logger.get_prompt(
+            "system_prompt", 
+            DEFAULT_SYSTEM_PROMPT,
+            "The main system instructions for the agent deciding how to behave."
+        )
+        await self.logger.get_prompt(
+            "user_task", 
+            DEFAULT_USER_PROMPT,
+            "The specific task instruction sent in every evaluation cycle."
+        )
     
     async def execute_tool(self, tool_name: str, arguments: dict) -> dict:
         """Route tool calls to the appropriate MCP server."""
@@ -236,16 +253,26 @@ class ClimateAgent:
         )
         
         # Run the agent loop
-        user_message = """Evaluate the current weather and thermostat state. 
-        Decide if any adjustments should be made to optimize comfort and energy efficiency.
-        Gather all necessary data first, then make your decision."""
+        # Run the agent loop
+        # Fetch prompts
+        system_prompt = await self.logger.get_prompt(
+            "system_prompt", 
+            DEFAULT_SYSTEM_PROMPT,
+            "The main system instructions for the agent deciding how to behave."
+        )
+        
+        user_message_template = await self.logger.get_prompt(
+            "user_task", 
+            DEFAULT_USER_PROMPT,
+            "The specific task instruction sent in every evaluation cycle."
+        )
         
         try:
             result = await self.ollama.chat_with_tools(
-                user_message=user_message,
+                user_message=user_message_template,
                 tools=all_tools,
                 tool_executor=self.execute_tool,
-                system_prompt=SYSTEM_PROMPT,
+                system_prompt=system_prompt,
                 max_iterations=6,
             )
             
@@ -360,6 +387,9 @@ async def startup():
     success = await agent.initialize()
     if not success:
         logger.error("Failed to initialize agent, will retry on first evaluation")
+
+    # Ensure prompts exist (even if agent failed to init)
+    await agent.ensure_prompts()
     
     # Run initial evaluation
     await agent.run_evaluation()

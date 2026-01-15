@@ -44,6 +44,14 @@ class DecisionLogger:
                     success INTEGER DEFAULT 1
                 )
             """)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS prompts (
+                    key TEXT PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    description TEXT,
+                    updated_at TEXT
+                )
+            """)
             await db.commit()
             logger.info(f"Database initialized at {self.db_path}")
     
@@ -336,3 +344,43 @@ class DecisionLogger:
                 })
 
             return {"daily_stats": daily, "days": days}
+
+    async def get_prompt(self, key: str, default: str, description: str = "") -> str:
+        """Get a prompt by key, creating it if it doesn't exist."""
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                "SELECT content FROM prompts WHERE key = ?",
+                (key,)
+            )
+            row = await cursor.fetchone()
+            
+            if row:
+                return row[0]
+            
+            # Create default if not exists
+            now = datetime.now().isoformat()
+            await db.execute(
+                "INSERT INTO prompts (key, content, description, updated_at) VALUES (?, ?, ?, ?)",
+                (key, default, description, now)
+            )
+            await db.commit()
+            return default
+            
+    async def update_prompt(self, key: str, content: str) -> bool:
+        """Update a prompt."""
+        async with aiosqlite.connect(self.db_path) as db:
+            now = datetime.now().isoformat()
+            await db.execute(
+                "UPDATE prompts SET content = ?, updated_at = ? WHERE key = ?",
+                (content, now, key)
+            )
+            await db.commit()
+            return True
+
+    async def get_all_prompts(self) -> list[dict]:
+        """Get all prompts."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM prompts ORDER BY key")
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
