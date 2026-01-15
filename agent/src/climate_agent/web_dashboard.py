@@ -575,10 +575,37 @@ DASHBOARD_HTML = """
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                     <i data-lucide="list"></i> Recent Decisions
                 </h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Comparing AI agent vs what HA automation would do</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Comparing AI agent vs what HA automation would do. Click a decision to see full reasoning.</p>
             </div>
             <div class="divide-y dark:divide-gray-700" id="decisions-list">
                 <!-- Decisions inserted here -->
+            </div>
+        </div>
+
+        <!-- Decision Detail Modal -->
+        <div id="decision-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+                <div class="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                        <i data-lucide="brain"></i> Decision Details
+                    </h3>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span id="modal-action-badge" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+                            <span id="modal-timestamp" class="text-sm text-gray-500 dark:text-gray-400"></span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">AI Reasoning</h4>
+                        <div id="modal-reasoning" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap"></div>
+                    </div>
+                    <div id="modal-comparison" class="mb-4"></div>
+                </div>
             </div>
         </div>
 
@@ -603,6 +630,75 @@ DASHBOARD_HTML = """
     <script>
         // Initialize Lucide
         lucide.createIcons();
+
+        // Modal functions
+        function openModal(action, timestamp, reasoning, comparison, aiTemp, baselineAction, baselineTemp, baselineRule, decisionsMatch) {
+            const modal = document.getElementById('decision-modal');
+            const actionBadge = document.getElementById('modal-action-badge');
+            const timestampEl = document.getElementById('modal-timestamp');
+            const reasoningEl = document.getElementById('modal-reasoning');
+            const comparisonEl = document.getElementById('modal-comparison');
+
+            // Set action badge
+            if (action === 'SET_TEMPERATURE') {
+                actionBadge.textContent = aiTemp ? `SET ${aiTemp}°C` : 'SET_TEMPERATURE';
+                actionBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
+            } else {
+                actionBadge.textContent = 'NO_CHANGE';
+                actionBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+            }
+
+            timestampEl.textContent = timestamp;
+            reasoningEl.textContent = reasoning;
+
+            // Build comparison HTML
+            if (baselineAction) {
+                const baselineTempStr = baselineTemp ? ` -> ${baselineTemp}°C` : '';
+                if (decisionsMatch === 0) {
+                    comparisonEl.innerHTML = `
+                        <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Baseline Comparison</h4>
+                        <div class="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-orange-600 dark:text-orange-400 font-semibold">AI Override</span>
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-300">
+                                <strong>Baseline would:</strong> ${baselineAction}${baselineTempStr}<br>
+                                <strong>Rule:</strong> ${baselineRule}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    comparisonEl.innerHTML = `
+                        <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Baseline Comparison</h4>
+                        <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <div class="text-sm text-gray-600 dark:text-gray-300">
+                                Matches baseline automation (${baselineRule})
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                comparisonEl.innerHTML = '';
+            }
+
+            modal.classList.remove('hidden');
+            // Re-initialize lucide icons in modal
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('decision-modal').classList.add('hidden');
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('decision-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
 
         // Dark mode toggle logic
         var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
@@ -982,8 +1078,16 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
 
         tool_info = f'<span class="text-gray-400 dark:text-gray-500 text-sm ml-2">({tool_count} tool calls)</span>' if tool_count else ""
 
+        # Escape reasoning for JavaScript (handle quotes, newlines, etc.)
+        reasoning_escaped = reasoning.replace('\\', '\\\\').replace("'", "\\'").replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r')
+        baseline_rule_escaped = baseline_rule.replace('\\', '\\\\').replace("'", "\\'").replace('"', '\\"') if baseline_rule else ""
+        baseline_action_escaped = baseline_action.replace('\\', '\\\\').replace("'", "\\'").replace('"', '\\"') if baseline_action else ""
+
+        # Build onclick handler with all the data
+        onclick_handler = f"openModal('{action}', '{timestamp}', '{reasoning_escaped}', '', {ai_temp if ai_temp else 'null'}, '{baseline_action_escaped}', {baseline_temp if baseline_temp else 'null'}, '{baseline_rule_escaped}', {decisions_match if decisions_match is not None else 'null'})"
+
         decisions_html += f"""
-        <div class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <div class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" onclick="{onclick_handler}">
             <div class="flex justify-between items-start mb-2">
                 <div class="flex items-center gap-2">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {ai_badge_class}">
@@ -993,7 +1097,7 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
                 </div>
                 <span class="text-sm text-gray-500 dark:text-gray-400">{timestamp}</span>
             </div>
-            <p class="text-gray-700 dark:text-gray-300">{reasoning[:300]}{"..." if len(reasoning) > 300 else ""}</p>
+            <p class="text-gray-700 dark:text-gray-300">{reasoning[:300]}{"..." if len(reasoning) > 300 else ""}<span class="text-blue-500 dark:text-blue-400 ml-1">{" (click to expand)" if len(reasoning) > 300 else ""}</span></p>
             {comparison_html}
         </div>
         """

@@ -250,6 +250,42 @@ response = requests.post(
 )
 ```
 
+### Agent Prompt Architecture
+
+The agent uses two prompts that work together:
+
+| Prompt | Purpose | When Sent |
+|--------|---------|-----------|
+| **system_prompt** | Sets up agent identity, rules, available tools, and decision-making logic | Once at conversation start |
+| **user_task** | The trigger that tells the agent to do its job | Every evaluation cycle (e.g., every 15 min) |
+
+**Flow:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  system_prompt (sent once)                                      │
+│  "You are an energy optimization agent... here are your tools,  │
+│   your goals, your decision rules, examples..."                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  user_task (sent every cycle)                                   │
+│  "Evaluate the current weather and thermostat state.            │
+│   Decide if any adjustments should be made..."                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    Agent executes tools
+                    Makes decision
+                    Returns response
+```
+
+**Think of it like:**
+- `system_prompt` = "Here's who you are and how to think"
+- `user_task` = "Now do your job"
+
+Both prompts are stored in the database and editable via the web dashboard. This allows tuning the agent's behavior without code changes.
+
 ### System Prompt for Energy Optimization Agent
 ```markdown
 You are an energy optimization agent for a home in Ottawa, Canada.
