@@ -1529,7 +1529,15 @@ async def api_chat_send(request: Request):
         agent = agent_main.agent
 
         if not agent.initialized:
-            return {"error": "Agent not initialized. Please wait for startup to complete."}
+            # Try to initialize on-demand
+            chat_logger.info("Agent not initialized, attempting initialization...")
+            try:
+                success = await agent.initialize()
+                if not success:
+                    return {"error": "Agent failed to initialize. Check that MCP servers (weather-mcp, homeassistant-mcp) and Ollama are running."}
+            except Exception as init_error:
+                chat_logger.error(f"Initialization error: {init_error}")
+                return {"error": f"Agent initialization failed: {str(init_error)}"}
 
         # Get the chat system prompt from DB (or use a default)
         logger = DecisionLogger()
