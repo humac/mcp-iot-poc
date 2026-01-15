@@ -64,6 +64,6 @@ jobs:
     steps:
       - name: Trigger Portainer Stack Update
         run: |
-          curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
+          curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}" \
           -H "CF-Access-Client-Id: ${{ secrets.CF_CLIENT_ID }}" \
           -H "CF-Access-Client-Secret: ${{ secrets.CF_CLIENT_SECRET }}"
