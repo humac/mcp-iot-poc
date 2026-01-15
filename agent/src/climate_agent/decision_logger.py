@@ -91,7 +91,7 @@ class DecisionLogger:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    datetime.utcnow().isoformat(),
+                    datetime.now().isoformat(),  # Use local time (respects TZ env var)
                     json.dumps(weather_data) if weather_data else None,
                     json.dumps(thermostat_state) if thermostat_state else None,
                     action,
@@ -203,7 +203,7 @@ class DecisionLogger:
             total = (await cursor.fetchone())[0]
             
             # Decisions today
-            today = datetime.utcnow().date().isoformat()
+            today = datetime.now().date().isoformat()  # Use local time
             cursor = await db.execute(
                 "SELECT COUNT(*) FROM decisions WHERE timestamp LIKE ?",
                 (f"{today}%",),

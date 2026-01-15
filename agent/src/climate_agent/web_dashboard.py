@@ -161,7 +161,7 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
     html = html.replace("{{ stats.decisions_today }}", str(stats["decisions_today"]))
     html = html.replace("{{ comparison.ai_override_rate }}", str(comparison["ai_override_rate"]))
     html = html.replace("{{ comparison.different_decisions }}", str(comparison["different_decisions"]))
-    html = html.replace("{{ now }}", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
+    html = html.replace("{{ now }}", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     
     # Handle current state
     if current_state:
