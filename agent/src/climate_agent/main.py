@@ -116,7 +116,9 @@ class BaselineAutomation:
 - Deadband: ±0.5°C (no change if within range)"""
 
 # System prompt for the agent
-SYSTEM_PROMPT = """You are an energy optimization agent for a home in Ottawa, Canada.
+SYSTEM_PROMPT = """IMPORTANT: You MUST respond in English only. All output must be in English.
+
+You are an energy optimization agent for a home in Ottawa, Canada.
 
 ## Available Tools
 - get_current_weather: Get current weather conditions (temperature, humidity, conditions)
@@ -140,11 +142,14 @@ SYSTEM_PROMPT = """You are an energy optimization agent for a home in Ottawa, Ca
 2. Minimize energy: Use weather forecast to avoid unnecessary heating/cooling cycles
 3. Be predictive: Pre-heat before cold snaps, let temp drift if warming trend
 
-## Decision Process
-1. FIRST: Call get_current_weather AND get_thermostat_state to gather data
-2. THEN: Call get_forecast with hours=12 to see upcoming conditions
-3. ANALYZE: Compare current state, forecast trends, and time of day
-4. DECIDE: Either call set_thermostat_temperature OR explain why no change is needed
+## Decision Process (MUST follow this order)
+1. FIRST: Call get_current_weather (REQUIRED - you MUST call this)
+2. SECOND: Call get_thermostat_state (REQUIRED - you MUST call this)
+3. THIRD: Call get_forecast with hours=12 to see upcoming conditions
+4. ANALYZE: Compare current state, forecast trends, and time of day
+5. DECIDE: Either call set_thermostat_temperature OR explain why no change is needed
+
+CRITICAL: You MUST call both get_current_weather AND get_thermostat_state every time.
 
 ## Decision Rules
 - If indoor temp is comfortable (19-22°C) AND forecast is stable → NO_CHANGE
@@ -159,7 +164,9 @@ After gathering data and making your decision, provide a brief explanation of:
 2. Your decision (NO_CHANGE or SET_TEMPERATURE to X°C)
 3. Your reasoning in 1-2 sentences
 
-Be concise. Focus on the key factors that influenced your decision."""
+Be concise. Focus on the key factors that influenced your decision.
+
+REMINDER: Always respond in English. Do not use Chinese or any other language."""
 
 
 class ClimateAgent:
@@ -251,6 +258,20 @@ class ClimateAgent:
                     weather_data = tc.get("result")
                 elif tc["tool"] == "get_thermostat_state":
                     thermostat_state = tc.get("result")
+                elif tc["tool"] == "get_forecast":
+                    # Fallback: extract current weather from forecast if get_current_weather wasn't called
+                    forecast_result = tc.get("result")
+                    if forecast_result and not weather_data:
+                        forecast_list = forecast_result.get("forecast", [])
+                        if forecast_list:
+                            first_hour = forecast_list[0]
+                            weather_data = {
+                                "temperature_c": first_hour.get("temperature_c"),
+                                "feels_like_c": first_hour.get("feels_like_c"),
+                                "conditions": first_hour.get("conditions"),
+                                "source": "forecast_fallback",
+                            }
+                            logger.warning("Using forecast data as fallback for current weather")
                 elif tc["tool"] == "set_thermostat_temperature":
                     ai_action = "SET_TEMPERATURE"
                     ai_temperature = tc.get("arguments", {}).get("temperature")

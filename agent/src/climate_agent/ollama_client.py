@@ -58,12 +58,15 @@ class OllamaClient:
             payload["tools"] = tools
         
         try:
+            logger.debug(f"Ollama request payload: {json.dumps(payload, indent=2)}")
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.base_url}/api/chat",
                     json=payload,
                     timeout=120.0,  # LLM can be slow
                 )
+                if response.status_code != 200:
+                    logger.error(f"Ollama error response: {response.text}")
                 response.raise_for_status()
                 result = response.json()
                 
