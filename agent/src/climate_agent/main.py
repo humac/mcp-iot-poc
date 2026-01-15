@@ -118,8 +118,6 @@ class BaselineAutomation:
 # System prompt for the agent
 SYSTEM_PROMPT = """You are an energy optimization agent for a home in Ottawa, Canada.
 
-IMPORTANT: Always respond in English only. Do not use any other language.
-
 ## Available Tools
 - get_current_weather: Get current weather conditions (temperature, humidity, conditions)
 - get_forecast: Get hourly weather forecast (pass hours as integer, e.g. 12)
