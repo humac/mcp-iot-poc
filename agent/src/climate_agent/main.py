@@ -41,63 +41,62 @@ class BaselineAutomation:
     This represents the "dumb" rule-based approach for comparison.
     """
     
-    # Typical HA automation rules (what most people would set up)
-    DAYTIME_START = 6   # 6 AM
-    NIGHTTIME_START = 22  # 10 PM
-    
-    DAYTIME_SETPOINT = 21.0    # Comfort temp during day
-    NIGHTTIME_SETPOINT = 18.0  # Setback at night
-    
-    COLD_THRESHOLD = -10  # Outdoor temp that triggers "cold boost"
-    COLD_BOOST = 1.0      # Extra degree when very cold
-    
-    HOT_THRESHOLD = 25    # Outdoor temp for summer mode
-    SUMMER_SETPOINT = 24.0  # AC target
-    
-    @classmethod
-    def get_decision(
-        cls,
+    def __init__(self, logger_instance):
+        self.logger = logger_instance
+
+    async def get_settings(self):
+        """Fetch current settings from DB."""
+        return {
+            "day_start": int(await self.logger.get_setting("baseline_day_start", "6", "Hour of day (0-23) when daytime heating starts", "Baseline")),
+            "day_end": int(await self.logger.get_setting("baseline_day_end", "23", "Hour of day (0-23) when nighttime setback starts", "Baseline")),
+            "day_temp": float(await self.logger.get_setting("baseline_day_temp", "21.0", "Target temperature for daytime (°C)", "Baseline")),
+            "night_temp": float(await self.logger.get_setting("baseline_night_temp", "18.0", "Target temperature for nighttime (°C)", "Baseline")),
+            "cold_threshold": float(await self.logger.get_setting("baseline_cold_threshold", "-15.0", "Outdoor temp (°C) triggering pre-heating", "Baseline")),
+            "cold_boost_amount": float(await self.logger.get_setting("baseline_cold_boost_amount", "1.0", "Degrees to boost setpoint when cold (°C)", "Baseline")),
+            "hot_threshold": float(await self.logger.get_setting("baseline_hot_threshold", "25.0", "Outdoor temp (°C) triggering summer mode", "Baseline")),
+            "summer_setpoint": float(await self.logger.get_setting("baseline_summer_setpoint", "24.0", "Target temperature for cooling (°C)", "Baseline")),
+            "deadband": float(await self.logger.get_setting("baseline_deadband", "0.5", "Deadband for temperature changes (°C)", "Baseline")),
+        }
+
+    async def get_baseline_decision(
+        self,
         current_hour: int,
         outdoor_temp: float,
         indoor_temp: float,
         current_setpoint: float,
     ) -> dict:
-        """
-        Calculate what a basic HA automation would do.
+        """Get decision based on simple rule-based logic."""
+        settings = await self.get_settings()
         
-        Returns dict with:
-          - action: "NO_CHANGE" or "SET_TEMPERATURE"
-          - temperature: target temp (if action is SET_TEMPERATURE)
-          - rule_triggered: which rule fired
-          - reasoning: explanation
-        """
-        # Determine base setpoint by time of day
-        is_daytime = cls.DAYTIME_START <= current_hour < cls.NIGHTTIME_START
-        base_setpoint = cls.DAYTIME_SETPOINT if is_daytime else cls.NIGHTTIME_SETPOINT
+        # Rule 1: Nighttime setback
+        if current_hour < settings["day_start"] or current_hour >= settings["day_end"]:
+            base_setpoint = settings["night_temp"]
+        else:
+            base_setpoint = settings["day_temp"]
         
         target = base_setpoint
         rule_triggered = "time_based_schedule"
-        reasoning = f"{'Daytime' if is_daytime else 'Nighttime'} schedule: {base_setpoint}°C"
+        reasoning = f"{'Daytime' if settings['day_start'] <= current_hour < settings['day_end'] else 'Nighttime'} schedule: {base_setpoint}°C"
         
         # Cold weather boost
-        if outdoor_temp is not None and outdoor_temp < cls.COLD_THRESHOLD:
-            target = base_setpoint + cls.COLD_BOOST
+        if outdoor_temp is not None and outdoor_temp < settings["cold_threshold"]:
+            target = base_setpoint + settings["cold_boost_amount"]
             rule_triggered = "cold_weather_boost"
-            reasoning = f"Cold outside ({outdoor_temp}°C < {cls.COLD_THRESHOLD}°C): boost to {target}°C"
+            reasoning = f"Cold outside ({outdoor_temp}°C < {settings['cold_threshold']}°C): boost to {target}°C"
         
         # Hot weather / AC mode
-        elif outdoor_temp is not None and outdoor_temp > cls.HOT_THRESHOLD:
-            target = cls.SUMMER_SETPOINT
+        elif outdoor_temp is not None and outdoor_temp > settings["hot_threshold"]:
+            target = settings["summer_setpoint"]
             rule_triggered = "hot_weather_cooling"
-            reasoning = f"Hot outside ({outdoor_temp}°C > {cls.HOT_THRESHOLD}°C): cool to {target}°C"
+            reasoning = f"Hot outside ({outdoor_temp}°C > {settings['hot_threshold']}°C): cool to {target}°C"
         
-        # Check if change is needed (with 0.5°C deadband)
-        if current_setpoint is not None and abs(current_setpoint - target) < 0.5:
+        # Check if change is needed (with deadband)
+        if current_setpoint is not None and abs(current_setpoint - target) < settings["deadband"]:
             return {
                 "action": "NO_CHANGE",
                 "temperature": current_setpoint,
                 "rule_triggered": "deadband",
-                "reasoning": f"Current setpoint {current_setpoint}°C is close enough to target {target}°C",
+                "reasoning": f"Current setpoint {current_setpoint}°C is close enough to target {target}°C (within {settings['deadband']}°C deadband)",
             }
         
         return {
@@ -107,18 +106,67 @@ class BaselineAutomation:
             "reasoning": reasoning,
         }
     
-    @classmethod
-    def describe_rules(cls) -> str:
+    async def describe_rules(self) -> str:
         """Return human-readable description of the automation rules."""
+        settings = await self.get_settings()
         return f"""Baseline HA Automation Rules:
-- Daytime ({cls.DAYTIME_START}:00 - {cls.NIGHTTIME_START}:00): {cls.DAYTIME_SETPOINT}°C
-- Nighttime: {cls.NIGHTTIME_SETPOINT}°C
-- Cold boost (outdoor < {cls.COLD_THRESHOLD}°C): +{cls.COLD_BOOST}°C
-- Summer cooling (outdoor > {cls.HOT_THRESHOLD}°C): {cls.SUMMER_SETPOINT}°C
-- Deadband: ±0.5°C (no change if within range)"""
+- Daytime ({settings['day_start']}:00 - {settings['day_end']}:00): {settings['day_temp']}°C
+- Nighttime: {settings['night_temp']}°C
+- Cold boost (outdoor < {settings['cold_threshold']}°C): +{settings['cold_boost_amount']}°C
+- Summer cooling (outdoor > {settings['hot_threshold']}°C): {settings['summer_setpoint']}°C
+- Deadband: ±{settings['deadband']}°C (no change if within range)"""
 
 # System prompt for the agent
-DEFAULT_SYSTEM_PROMPT = """IMPORTANT: You MUST respond in English only. All output must be in English.
+# DEFAULT_SYSTEM_PROMPT is now managed by DecisionLogger
+
+DEFAULT_USER_PROMPT = """Evaluate the current weather and thermostat state. 
+Decide if any adjustments should be made to optimize comfort and energy efficiency.
+Gather all necessary data first, then make your decision."""
+
+
+class ClimateAgent:
+    """Main agent class that orchestrates the climate control loop."""
+    
+    def __init__(self):
+        self.weather_client = MCPClient(WEATHER_MCP_URL, "weather-mcp")
+        self.ha_client = MCPClient(HA_MCP_URL, "homeassistant-mcp")
+        self.ollama = OllamaClient()
+        self.logger = DecisionLogger()
+        self.baseline = BaselineAutomation(self.logger) # Pass logger to BaselineAutomation
+        self.initialized = False
+    
+    async def initialize(self):
+        """Initialize all clients."""
+        logger.info("Initializing Climate Agent...")
+        
+        # Initialize database
+        await self.logger.initialize()
+        
+        # Check Ollama
+        if not await self.ollama.health_check():
+            logger.error("Ollama is not available!")
+            return False
+        logger.info("Ollama is available")
+        
+        # Initialize MCP clients
+        if not await self.weather_client.initialize():
+            logger.error("Failed to initialize weather MCP client")
+            return False
+        
+        if not await self.ha_client.initialize():
+            logger.error("Failed to initialize HA MCP client")
+            return False
+        
+        self.initialized = True
+        logger.info("Climate Agent initialized successfully")
+        return True
+
+    async def ensure_prompts_and_settings(self):
+        """Ensure default prompts and settings exist in DB."""
+        # Prompts
+        await self.logger.get_prompt(
+            "system_prompt", 
+            """IMPORTANT: You MUST respond in English only. All output must be in English.
 
 You are an energy optimization agent for a home in Ottawa, Canada.
 
@@ -168,54 +216,7 @@ After gathering data and making your decision, provide a brief explanation of:
 
 Be concise. Focus on the key factors that influenced your decision.
 
-REMINDER: Always respond in English. Do not use Chinese or any other language."""
-
-DEFAULT_USER_PROMPT = """Evaluate the current weather and thermostat state. 
-Decide if any adjustments should be made to optimize comfort and energy efficiency.
-Gather all necessary data first, then make your decision."""
-
-
-class ClimateAgent:
-    """Main agent class that orchestrates the climate control loop."""
-    
-    def __init__(self):
-        self.weather_client = MCPClient(WEATHER_MCP_URL, "weather-mcp")
-        self.ha_client = MCPClient(HA_MCP_URL, "homeassistant-mcp")
-        self.ollama = OllamaClient()
-        self.logger = DecisionLogger()
-        self.initialized = False
-    
-    async def initialize(self):
-        """Initialize all clients."""
-        logger.info("Initializing Climate Agent...")
-        
-        # Initialize database
-        await self.logger.initialize()
-        
-        # Check Ollama
-        if not await self.ollama.health_check():
-            logger.error("Ollama is not available!")
-            return False
-        logger.info("Ollama is available")
-        
-        # Initialize MCP clients
-        if not await self.weather_client.initialize():
-            logger.error("Failed to initialize weather MCP client")
-            return False
-        
-        if not await self.ha_client.initialize():
-            logger.error("Failed to initialize HA MCP client")
-            return False
-        
-        self.initialized = True
-        logger.info("Climate Agent initialized successfully")
-        return True
-
-    async def ensure_prompts(self):
-        """Ensure default prompts exist in DB."""
-        await self.logger.get_prompt(
-            "system_prompt", 
-            DEFAULT_SYSTEM_PROMPT,
+REMINDER: Always respond in English. Do not use Chinese or any other language.""",
             "The main system instructions for the agent deciding how to behave."
         )
         await self.logger.get_prompt(
@@ -223,6 +224,14 @@ class ClimateAgent:
             DEFAULT_USER_PROMPT,
             "The specific task instruction sent in every evaluation cycle."
         )
+
+        # Agent Settings
+        await self.logger.get_setting("agent_min_temp", "17.0", "Minimum allowed thermostat temperature (°C)", "Agent")
+        await self.logger.get_setting("agent_max_temp", "23.0", "Maximum allowed thermostat temperature (°C)", "Agent")
+        await self.logger.get_setting("check_interval_minutes", "30", "How often the agent runs (minutes)", "Agent")
+
+        # Baseline Automation Settings (ensured by BaselineAutomation.get_settings)
+        await self.baseline.get_settings()
     
     async def execute_tool(self, tool_name: str, arguments: dict) -> dict:
         """Route tool calls to the appropriate MCP server."""
@@ -246,6 +255,69 @@ class ClimateAgent:
         logger.info("Starting evaluation cycle")
         logger.info(f"Time: {datetime.now().isoformat()}")
         
+        # Get Agent Settings
+        min_temp = float(await self.logger.get_setting("agent_min_temp", "17.0"))
+        max_temp = float(await self.logger.get_setting("agent_max_temp", "23.0"))
+
+        # Define tools for LLM, including dynamic temperature range
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_current_weather",
+                    "description": "Get current outdoor weather conditions",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_forecast",
+                    "description": "Get weather forecast for the next N hours",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "hours": {
+                                "type": "integer",
+                                "description": "Number of hours to forecast (default 12)",
+                            },
+                        },
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_thermostat_state",
+                    "description": "Get current indoor temperature and thermostat settings",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "set_thermostat_temperature",
+                    "description": f"Set the thermostat target temperature (Range: {min_temp}-{max_temp}°C)",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "temperature": {
+                                "type": "number",
+                                "description": f"Target temperature in Celsius (must be between {min_temp} and {max_temp})",
+                            },
+                        },
+                        "required": ["temperature"],
+                    },
+                },
+            },
+        ]
+        
         # Combine tools from both MCP servers
         all_tools = (
             self.weather_client.get_tools_for_llm() +
@@ -253,11 +325,60 @@ class ClimateAgent:
         )
         
         # Run the agent loop
-        # Run the agent loop
         # Fetch prompts
         system_prompt = await self.logger.get_prompt(
             "system_prompt", 
-            DEFAULT_SYSTEM_PROMPT,
+            """IMPORTANT: You MUST respond in English only. All output must be in English.
+
+You are an energy optimization agent for a home in Ottawa, Canada.
+
+## Available Tools
+- get_current_weather: Get current weather conditions (temperature, humidity, conditions)
+- get_forecast: Get hourly weather forecast (pass hours as integer, e.g. 12)
+- get_thermostat_state: Get current thermostat setting and indoor temperature
+- set_thermostat_temperature: Adjust the thermostat setpoint (17-23°C range enforced)
+
+## CRITICAL Tool Calling Rules
+1. Call each tool ONLY ONCE per evaluation - do not repeat tool calls
+2. Only use parameters defined in the tool schema:
+   - get_current_weather: no parameters needed, just call with {}
+   - get_forecast: optional "hours" parameter (integer 1-48, default 12)
+   - get_thermostat_state: no parameters needed, just call with {}
+   - set_thermostat_temperature: requires "temperature" (number in Celsius)
+3. Do NOT invent or hallucinate parameters that don't exist
+4. If you decide to change the temperature, you MUST call set_thermostat_temperature
+5. If you decide NOT to change, do NOT call set_thermostat_temperature
+
+## Your Goals
+1. Maintain comfort: Target 20-21°C when occupied (6am-11pm), 18°C overnight
+2. Minimize energy: Use weather forecast to avoid unnecessary heating/cooling cycles
+3. Be predictive: Pre-heat before cold snaps, let temp drift if warming trend
+
+## Decision Process (MUST follow this order)
+1. FIRST: Call get_current_weather (REQUIRED - you MUST call this)
+2. SECOND: Call get_thermostat_state (REQUIRED - you MUST call this)
+3. THIRD: Call get_forecast with hours=12 to see upcoming conditions
+4. ANALYZE: Compare current state, forecast trends, and time of day
+5. DECIDE: Either call set_thermostat_temperature OR explain why no change is needed
+
+CRITICAL: You MUST call both get_current_weather AND get_thermostat_state every time.
+
+## Decision Rules
+- If indoor temp is comfortable (19-22°C) AND forecast is stable → NO_CHANGE
+- If cold front coming (temp dropping 5°C+) in next 4 hours → consider pre-heating
+- If warming trend AND currently heating → can lower setpoint 1-2°C
+- At night (11pm-6am) → target 18°C for energy savings
+- Never set below 17°C or above 23°C
+
+## Response Format
+After gathering data and making your decision, provide a brief explanation of:
+1. Current conditions (indoor temp, outdoor temp, forecast trend)
+2. Your decision (NO_CHANGE or SET_TEMPERATURE to X°C)
+3. Your reasoning in 1-2 sentences
+
+Be concise. Focus on the key factors that influenced your decision.
+
+REMINDER: Always respond in English. Do not use Chinese or any other language.""",
             "The main system instructions for the agent deciding how to behave."
         )
         
@@ -313,7 +434,7 @@ class ClimateAgent:
                 indoor_temp = thermostat_state.get("current_temperature")
                 current_setpoint = thermostat_state.get("target_temperature")
                 
-                baseline_decision = BaselineAutomation.get_decision(
+                baseline_decision = await self.baseline.get_baseline_decision(
                     current_hour=current_hour,
                     outdoor_temp=outdoor_temp,
                     indoor_temp=indoor_temp,
@@ -389,7 +510,7 @@ async def startup():
         logger.error("Failed to initialize agent, will retry on first evaluation")
 
     # Ensure prompts exist (even if agent failed to init)
-    await agent.ensure_prompts()
+    await agent.ensure_prompts_and_settings()
     
     # Run initial evaluation
     await agent.run_evaluation()

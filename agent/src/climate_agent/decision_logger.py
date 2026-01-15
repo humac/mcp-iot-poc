@@ -52,6 +52,15 @@ class DecisionLogger:
                     updated_at TEXT
                 )
             """)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    description TEXT,
+                    category TEXT,
+                    updated_at TEXT
+                )
+            """)
             await db.commit()
             logger.info(f"Database initialized at {self.db_path}")
     
@@ -382,5 +391,45 @@ class DecisionLogger:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM prompts ORDER BY key")
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def get_setting(self, key: str, default: str, description: str = "", category: str = "General") -> str:
+        """Get a setting by key, creating it if it doesn't exist."""
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                "SELECT value FROM settings WHERE key = ?",
+                (key,)
+            )
+            row = await cursor.fetchone()
+            
+            if row:
+                return row[0]
+            
+            # Create default if not exists
+            now = datetime.now().isoformat()
+            await db.execute(
+                "INSERT INTO settings (key, value, description, category, updated_at) VALUES (?, ?, ?, ?, ?)",
+                (key, str(default), description, category, now)
+            )
+            await db.commit()
+            return str(default)
+
+    async def update_setting(self, key: str, value: str) -> bool:
+        """Update a setting."""
+        async with aiosqlite.connect(self.db_path) as db:
+            now = datetime.now().isoformat()
+            await db.execute(
+                "UPDATE settings SET value = ?, updated_at = ? WHERE key = ?",
+                (str(value), now, key)
+            )
+            await db.commit()
+            return True
+
+    async def get_all_settings(self) -> list[dict]:
+        """Get all settings."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM settings ORDER BY category, key")
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]

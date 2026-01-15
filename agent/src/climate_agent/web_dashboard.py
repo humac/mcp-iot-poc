@@ -40,19 +40,22 @@ PROMPTS_PAGE_HTML = """
             document.documentElement.classList.remove('dark')
         }
     </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 min-h-screen transition-colors duration-200">
     <div class="container mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-4">
-                 <a href="/" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                    ← Back to Dashboard
+                 <a href="/" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-2">
+                    <i data-lucide="arrow-left"></i> Back to Dashboard
                  </a>
-                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">📝 Agent Prompts</h1>
+                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+                    <i data-lucide="file-text"></i> Agent Prompts
+                 </h1>
             </div>
              <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
-                <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
+                <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
             </button>
         </div>
 
@@ -67,15 +70,23 @@ PROMPTS_PAGE_HTML = """
     </div>
 
     <script>
+        // Initialize Lucide
+        lucide.createIcons();
+
         // Dark mode toggle logic (reused)
         var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
         var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
-
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            themeToggleLightIcon.classList.remove('hidden');
-        } else {
-            themeToggleDarkIcon.classList.remove('hidden');
+        
+        function updateThemeIcons() {
+            if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                themeToggleLightIcon.classList.add('hidden');
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
         }
+        updateThemeIcons();
 
         var themeToggleBtn = document.getElementById('theme-toggle');
         themeToggleBtn.addEventListener('click', function() {
@@ -98,6 +109,7 @@ PROMPTS_PAGE_HTML = """
                     localStorage.setItem('color-theme', 'dark');
                 }
             }
+            updateThemeIcons();
         });
 
         // Load prompts
@@ -187,6 +199,209 @@ PROMPTS_PAGE_HTML = """
 </html>
 """
 
+SETTINGS_PAGE_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Climate Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script>
+        // Check local storage for dark mode preference
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-4">
+                 <a href="/" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-2">
+                    <i data-lucide="arrow-left"></i> Back to Dashboard
+                 </a>
+                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+                    <i data-lucide="settings"></i> Settings
+                 </h1>
+            </div>
+             <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
+                <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div id="settings-container" class="space-y-8">
+            <!-- Loading -->
+            <div class="text-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p class="mt-4 text-gray-500">Loading settings...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide
+        lucide.createIcons();
+
+        // Dark mode toggle logic
+        var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        var themeToggleBtn = document.getElementById('theme-toggle');
+
+        function updateThemeIcons() {
+            if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                themeToggleLightIcon.classList.add('hidden');
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+        }
+        updateThemeIcons();
+
+        themeToggleBtn.addEventListener('click', function() {
+            if (localStorage.getItem('color-theme')) {
+                if (localStorage.getItem('color-theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                }
+            }
+            updateThemeIcons();
+        });
+
+        // Load Settings
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                
+                const container = document.getElementById('settings-container');
+                container.innerHTML = '';
+                
+                // Group by category
+                const groups = {};
+                settings.forEach(s => {
+                    if (!groups[s.category]) groups[s.category] = [];
+                    groups[s.category].push(s);
+                });
+
+                // Render groups
+                Object.keys(groups).forEach(category => {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden';
+                    
+                    let html = `
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">${category || 'General'}</h2>
+                        </div>
+                        <div class="p-6 space-y-6">
+                    `;
+
+                    groups[category].forEach(setting => {
+                        html += `
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                <div class="md:col-span-2">
+                                    <label for="${setting.key}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        ${formatKey(setting.key)}
+                                    </label>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">${setting.description}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="${setting.key}" value="${setting.value}" 
+                                        class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                    <button onclick="saveSetting('${setting.key}')"
+                                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    groupDiv.innerHTML = html;
+                    container.appendChild(groupDiv);
+                });
+                
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                document.getElementById('settings-container').innerHTML = `
+                    <div class="text-center text-red-500 py-8">
+                        Error loading settings. Please refresh.
+                    </div>
+                `;
+            }
+        }
+
+        async function saveSetting(key) {
+            const input = document.getElementById(key);
+            const value = input.value;
+            const btn = event.target;
+            const originalText = btn.innerText;
+
+            try {
+                btn.disabled = true;
+                btn.innerText = '...';
+                
+                const response = await fetch(`/api/settings/${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ value })
+                });
+
+                if (response.ok) {
+                    const originalClass = btn.className;
+                    btn.className = "text-white bg-green-600 hover:bg-green-700 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none";
+                    btn.innerText = 'Saved';
+                    setTimeout(() => {
+                        btn.className = originalClass;
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (error) {
+                console.error(error);
+                btn.innerText = 'Error';
+                btn.className = "text-white bg-red-600 hover:bg-red-700 font-medium rounded-lg text-sm px-4 py-2";
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }, 3000);
+            }
+        }
+
+        function formatKey(key) {
+            return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        }
+
+        loadSettings();
+    </script>
+</body>
+</html>
+"""
+
 DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html lang="en">
@@ -195,6 +410,7 @@ DASHBOARD_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Climate Agent Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -235,16 +451,21 @@ DASHBOARD_HTML = """
     <div class="container mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-8">
             <div>
-                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">🌡️ Climate Agent Dashboard</h1>
+                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-3">
+                    <i data-lucide="thermometer"></i> Climate Agent Dashboard
+                 </h1>
                  <p class="text-gray-600 dark:text-gray-400">AI-powered thermostat control vs traditional automation</p>
             </div>
             <div class="flex items-center gap-4">
-                <a href="/prompts" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
-                    📝 Configure Prompts
+                <a href="/prompts" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
+                    <i data-lucide="file-edit" class="w-4 h-4"></i> Prompts
+                </a>
+                <a href="/settings" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
+                    <i data-lucide="settings" class="w-4 h-4"></i> Settings
                 </a>
                 <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
-                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                    <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
+                    <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
                 </button>
             </div>
         </div>
@@ -252,31 +473,48 @@ DASHBOARD_HTML = """
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500 dark:text-gray-400">Total Decisions</div>
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Total Decisions</div>
+                    <i data-lucide="activity" class="w-5 h-5 text-blue-500"></i>
+                </div>
                 <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.total_decisions }}</div>
             </div>
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500 dark:text-gray-400">Today</div>
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Today</div>
+                    <i data-lucide="calendar" class="w-5 h-5 text-green-500"></i>
+                </div>
                 <div class="text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.decisions_today }}</div>
             </div>
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500 dark:text-gray-400">AI Override Rate</div>
+                <div class="flex items-center justify-between mb-2">
+                     <div class="text-sm text-gray-500 dark:text-gray-400">Override Rate</div>
+                     <i data-lucide="zap" class="w-5 h-5 text-purple-500"></i>
+                </div>
                 <div class="text-3xl font-bold text-purple-600 dark:text-purple-400">{{ comparison.ai_override_rate }}%</div>
-                <div class="text-xs text-gray-400 dark:text-gray-500">Times AI chose differently</div>
+                <div class="text-xs text-gray-400 dark:text-gray-500">AI divergence</div>
             </div>
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500 dark:text-gray-400">Different Decisions</div>
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Differences</div>
+                    <i data-lucide="git-branch" class="w-5 h-5 text-orange-500"></i>
+                </div>
                 <div class="text-3xl font-bold text-orange-600 dark:text-orange-400">{{ comparison.different_decisions }}</div>
             </div>
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500 dark:text-gray-400">Status</div>
-                <div class="text-3xl font-bold text-green-500 dark:text-green-400">● Running</div>
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Status</div>
+                    <i data-lucide="power" class="w-5 h-5 text-green-500"></i>
+                </div>
+                <div class="text-3xl font-bold text-green-500 dark:text-green-400">Running</div>
             </div>
         </div>
 
         <!-- Current State -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8" id="current-state">
-            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Current State</h2>
+            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <i data-lucide="home"></i> Current State
+            </h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <div class="text-sm text-gray-500 dark:text-gray-400">Indoor Temp</div>
@@ -301,7 +539,9 @@ DASHBOARD_HTML = """
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <!-- Temperature Timeline Chart -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">📈 Temperature Timeline</h2>
+                <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <i data-lucide="trending-up"></i> Temperature Timeline
+                </h2>
                 <div style="height: 300px;">
                     <canvas id="tempChart"></canvas>
                 </div>
@@ -309,7 +549,9 @@ DASHBOARD_HTML = """
 
             <!-- Daily Override Rate Chart -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">📊 Daily AI Override Rate</h2>
+                <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <i data-lucide="bar-chart-2"></i> Daily AI Override Rate
+                </h2>
                 <div style="height: 300px;">
                     <canvas id="overrideChart"></canvas>
                 </div>
@@ -318,7 +560,9 @@ DASHBOARD_HTML = """
 
         <!-- Hourly Analysis -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">🕐 AI Overrides by Hour of Day</h2>
+            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <i data-lucide="clock"></i> AI Overrides by Hour of Day
+            </h2>
             <div style="height: 250px;">
                 <canvas id="hourlyChart"></canvas>
             </div>
@@ -328,7 +572,9 @@ DASHBOARD_HTML = """
         <!-- Recent Decisions with Comparison -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
             <div class="px-6 py-4 border-b dark:border-gray-700">
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Recent Decisions</h2>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <i data-lucide="list"></i> Recent Decisions
+                </h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Comparing AI agent vs what HA automation would do</p>
             </div>
             <div class="divide-y dark:divide-gray-700" id="decisions-list">
@@ -338,7 +584,9 @@ DASHBOARD_HTML = """
 
         <!-- Baseline Rules Reference -->
         <div class="mt-8 bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2">📋 Baseline HA Automation Rules (for comparison)</h3>
+            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2">
+                <i data-lucide="clipboard-list"></i> Baseline HA Automation Rules
+            </h3>
             <div class="text-sm text-gray-600 dark:text-gray-300 grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>• Daytime (6am-10pm): 21°C</div>
                 <div>• Nighttime: 18°C</div>
@@ -353,27 +601,27 @@ DASHBOARD_HTML = """
     </div>
 
     <script>
+        // Initialize Lucide
+        lucide.createIcons();
+
         // Dark mode toggle logic
         var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
         var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
-
-        // Change the icons inside the button based on previous settings
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            themeToggleLightIcon.classList.remove('hidden');
-        } else {
-            themeToggleDarkIcon.classList.remove('hidden');
-        }
-
         var themeToggleBtn = document.getElementById('theme-toggle');
 
+        function updateThemeIcons() {
+            if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                themeToggleLightIcon.classList.add('hidden');
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+        }
+        updateThemeIcons();
+
         themeToggleBtn.addEventListener('click', function() {
-
-            // toggle icons inside button
-            themeToggleDarkIcon.classList.toggle('hidden');
-            themeToggleLightIcon.classList.toggle('hidden');
-
-            // if set via local storage previously
-            if (localStorage.getItem('color-theme')) {
+             if (localStorage.getItem('color-theme')) {
                 if (localStorage.getItem('color-theme') === 'light') {
                     document.documentElement.classList.add('dark');
                     localStorage.setItem('color-theme', 'dark');
@@ -381,8 +629,6 @@ DASHBOARD_HTML = """
                     document.documentElement.classList.remove('dark');
                     localStorage.setItem('color-theme', 'light');
                 }
-
-            // if NOT set via local storage previously
             } else {
                 if (document.documentElement.classList.contains('dark')) {
                     document.documentElement.classList.remove('dark');
@@ -392,6 +638,7 @@ DASHBOARD_HTML = """
                     localStorage.setItem('color-theme', 'dark');
                 }
             }
+            updateThemeIcons();
         });
 
         // Timeline data from server
@@ -840,4 +1087,30 @@ async def api_update_prompt(key: str, request: Request):
         return {"error": "Content required"}
     
     await logger.update_prompt(key, content)
+    return {"status": "success", "key": key}
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    """Render the settings page."""
+    return HTMLResponse(content=SETTINGS_PAGE_HTML)
+
+
+@router.get("/api/settings")
+async def api_get_settings():
+    """Get all settings."""
+    logger = DecisionLogger()
+    return await logger.get_all_settings()
+
+
+@router.post("/api/settings/{key}")
+async def api_update_setting(key: str, request: Request):
+    """Update a specific setting."""
+    logger = DecisionLogger()
+    data = await request.json()
+    value = data.get("value")
+    if value is None:
+        return {"error": "Value required"}
+    
+    await logger.update_setting(key, value)
     return {"status": "success", "key": key}
