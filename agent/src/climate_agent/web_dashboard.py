@@ -27,62 +27,99 @@ DASHBOARD_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Climate Agent Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script>
+        // Check local storage for dark mode preference
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+
         // Auto-refresh every 60 seconds
         setTimeout(() => location.reload(), 60000);
     </script>
+    <style>
+        /* Custom scrollbar for dark mode if needed */
+        .dark ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #1f2937; 
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; 
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen transition-colors duration-200">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">🌡️ Climate Agent Dashboard</h1>
-        <p class="text-gray-600 mb-8">AI-powered thermostat control vs traditional automation</p>
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">🌡️ Climate Agent Dashboard</h1>
+                 <p class="text-gray-600 dark:text-gray-400">AI-powered thermostat control vs traditional automation</p>
+            </div>
+             <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+            </button>
+        </div>
 
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500">Total Decisions</div>
-                <div class="text-3xl font-bold text-blue-600">{{ stats.total_decisions }}</div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm text-gray-500 dark:text-gray-400">Total Decisions</div>
+                <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.total_decisions }}</div>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500">Today</div>
-                <div class="text-3xl font-bold text-green-600">{{ stats.decisions_today }}</div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm text-gray-500 dark:text-gray-400">Today</div>
+                <div class="text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.decisions_today }}</div>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500">AI Override Rate</div>
-                <div class="text-3xl font-bold text-purple-600">{{ comparison.ai_override_rate }}%</div>
-                <div class="text-xs text-gray-400">Times AI chose differently</div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm text-gray-500 dark:text-gray-400">AI Override Rate</div>
+                <div class="text-3xl font-bold text-purple-600 dark:text-purple-400">{{ comparison.ai_override_rate }}%</div>
+                <div class="text-xs text-gray-400 dark:text-gray-500">Times AI chose differently</div>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500">Different Decisions</div>
-                <div class="text-3xl font-bold text-orange-600">{{ comparison.different_decisions }}</div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm text-gray-500 dark:text-gray-400">Different Decisions</div>
+                <div class="text-3xl font-bold text-orange-600 dark:text-orange-400">{{ comparison.different_decisions }}</div>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-sm text-gray-500">Status</div>
-                <div class="text-3xl font-bold text-green-500">● Running</div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm text-gray-500 dark:text-gray-400">Status</div>
+                <div class="text-3xl font-bold text-green-500 dark:text-green-400">● Running</div>
             </div>
         </div>
 
         <!-- Current State -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8" id="current-state">
-            <h2 class="text-xl font-semibold mb-4">Current State</h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8" id="current-state">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Current State</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                    <div class="text-sm text-gray-500">Indoor Temp</div>
-                    <div class="text-2xl font-bold">{{ current_state.current_temp }}°C</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Indoor Temp</div>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ current_state.current_temp }}°C</div>
                 </div>
                 <div>
-                    <div class="text-sm text-gray-500">Target Temp</div>
-                    <div class="text-2xl font-bold">{{ current_state.target_temp }}°C</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Target Temp</div>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ current_state.target_temp }}°C</div>
                 </div>
                 <div>
-                    <div class="text-sm text-gray-500">HVAC Mode</div>
-                    <div class="text-2xl font-bold capitalize">{{ current_state.hvac_mode }}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">HVAC Mode</div>
+                    <div class="text-2xl font-bold capitalize text-gray-800 dark:text-gray-100">{{ current_state.hvac_mode }}</div>
                 </div>
                 <div>
-                    <div class="text-sm text-gray-500">Outside Temp</div>
-                    <div class="text-2xl font-bold">{{ current_state.outside_temp }}°C</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Outside Temp</div>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ current_state.outside_temp }}°C</div>
                 </div>
             </div>
         </div>
@@ -90,16 +127,16 @@ DASHBOARD_HTML = """
         <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <!-- Temperature Timeline Chart -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-4">📈 Temperature Timeline</h2>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">📈 Temperature Timeline</h2>
                 <div style="height: 300px;">
                     <canvas id="tempChart"></canvas>
                 </div>
             </div>
 
             <!-- Daily Override Rate Chart -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-4">📊 Daily AI Override Rate</h2>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">📊 Daily AI Override Rate</h2>
                 <div style="height: 300px;">
                     <canvas id="overrideChart"></canvas>
                 </div>
@@ -107,29 +144,29 @@ DASHBOARD_HTML = """
         </div>
 
         <!-- Hourly Analysis -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4">🕐 AI Overrides by Hour of Day</h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">🕐 AI Overrides by Hour of Day</h2>
             <div style="height: 250px;">
                 <canvas id="hourlyChart"></canvas>
             </div>
-            <p class="text-sm text-gray-500 mt-2">Shows when AI most often disagrees with baseline automation</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Shows when AI most often disagrees with baseline automation</p>
         </div>
 
         <!-- Recent Decisions with Comparison -->
-        <div class="bg-white rounded-lg shadow">
-            <div class="px-6 py-4 border-b">
-                <h2 class="text-xl font-semibold">Recent Decisions</h2>
-                <p class="text-sm text-gray-500">Comparing AI agent vs what HA automation would do</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div class="px-6 py-4 border-b dark:border-gray-700">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Recent Decisions</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Comparing AI agent vs what HA automation would do</p>
             </div>
-            <div class="divide-y" id="decisions-list">
+            <div class="divide-y dark:divide-gray-700" id="decisions-list">
                 <!-- Decisions inserted here -->
             </div>
         </div>
 
         <!-- Baseline Rules Reference -->
-        <div class="mt-8 bg-gray-50 rounded-lg p-6">
-            <h3 class="font-semibold text-gray-700 mb-2">📋 Baseline HA Automation Rules (for comparison)</h3>
-            <div class="text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div class="mt-8 bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2">📋 Baseline HA Automation Rules (for comparison)</h3>
+            <div class="text-sm text-gray-600 dark:text-gray-300 grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>• Daytime (6am-10pm): 21°C</div>
                 <div>• Nighttime: 18°C</div>
                 <div>• Cold boost (outdoor &lt; -10°C): +1°C</div>
@@ -137,16 +174,62 @@ DASHBOARD_HTML = """
             </div>
         </div>
 
-        <div class="mt-8 text-center text-gray-500 text-sm">
+        <div class="mt-8 text-center text-gray-500 dark:text-gray-500 text-sm">
             Auto-refreshes every 60 seconds | Last updated: {{ now }}
         </div>
     </div>
 
     <script>
+        // Dark mode toggle logic
+        var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        // Change the icons inside the button based on previous settings
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+
+        var themeToggleBtn = document.getElementById('theme-toggle');
+
+        themeToggleBtn.addEventListener('click', function() {
+
+            // toggle icons inside button
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+
+            // if set via local storage previously
+            if (localStorage.getItem('color-theme')) {
+                if (localStorage.getItem('color-theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                }
+
+            // if NOT set via local storage previously
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                }
+            }
+        });
+
         // Timeline data from server
         const timelineData = {{ timeline_json }};
         const dailyData = {{ daily_json }};
         const hourlyData = {{ hourly_json }};
+
+        // Chart defaults for dark mode logic could be improved here but sticking to simple override
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        Chart.defaults.color = isDarkMode ? '#9ca3af' : '#6b7280';
+        Chart.defaults.borderColor = isDarkMode ? '#374151' : '#e5e7eb';
 
         // Temperature Timeline Chart
         if (timelineData.length > 0) {
@@ -433,13 +516,13 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
 
         # Determine badge color for AI decision
         if action == "NO_CHANGE":
-            ai_badge_class = "bg-gray-100 text-gray-800"
+            ai_badge_class = "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
         elif action == "SET_TEMPERATURE":
-            ai_badge_class = "bg-blue-100 text-blue-800"
+            ai_badge_class = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
         elif action == "ERROR":
-            ai_badge_class = "bg-red-100 text-red-800"
+            ai_badge_class = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
         else:
-            ai_badge_class = "bg-green-100 text-green-800"
+            ai_badge_class = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
 
         # Format AI decision text
         ai_temp_str = f" → {ai_temp}°C" if ai_temp else ""
@@ -452,19 +535,19 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
             if decisions_match == 0:
                 # Decisions differ - highlight this
                 comparison_html = f"""
-                <div class="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div class="mt-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="text-orange-600 font-semibold">⚡ AI Override</span>
+                        <span class="text-orange-600 dark:text-orange-400 font-semibold">⚡ AI Override</span>
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                            <span class="text-gray-500">Baseline would:</span>
-                            <span class="font-medium">{baseline_action}{baseline_temp_str}</span>
-                            <span class="text-gray-400 text-xs">({baseline_rule})</span>
+                            <span class="text-gray-500 dark:text-gray-400">Baseline would:</span>
+                            <span class="font-medium text-gray-800 dark:text-gray-200">{baseline_action}{baseline_temp_str}</span>
+                            <span class="text-gray-400 dark:text-gray-500 text-xs">({baseline_rule})</span>
                         </div>
                         <div>
-                            <span class="text-gray-500">AI chose:</span>
-                            <span class="font-medium text-blue-600">{action}{ai_temp_str}</span>
+                            <span class="text-gray-500 dark:text-gray-400">AI chose:</span>
+                            <span class="font-medium text-blue-600 dark:text-blue-400">{action}{ai_temp_str}</span>
                         </div>
                     </div>
                 </div>
@@ -472,15 +555,15 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
             else:
                 # Decisions match
                 comparison_html = f"""
-                <div class="mt-2 text-sm text-gray-500">
+                <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                     ✓ Matches baseline automation ({baseline_rule})
                 </div>
                 """
 
-        tool_info = f'<span class="text-gray-400 text-sm ml-2">({tool_count} tool calls)</span>' if tool_count else ""
+        tool_info = f'<span class="text-gray-400 dark:text-gray-500 text-sm ml-2">({tool_count} tool calls)</span>' if tool_count else ""
 
         decisions_html += f"""
-        <div class="px-6 py-4 hover:bg-gray-50">
+        <div class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <div class="flex justify-between items-start mb-2">
                 <div class="flex items-center gap-2">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {ai_badge_class}">
@@ -488,16 +571,16 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
                     </span>
                     {tool_info}
                 </div>
-                <span class="text-sm text-gray-500">{timestamp}</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400">{timestamp}</span>
             </div>
-            <p class="text-gray-700">{reasoning[:300]}{"..." if len(reasoning) > 300 else ""}</p>
+            <p class="text-gray-700 dark:text-gray-300">{reasoning[:300]}{"..." if len(reasoning) > 300 else ""}</p>
             {comparison_html}
         </div>
         """
 
     if not decisions_html:
         decisions_html = """
-        <div class="px-6 py-8 text-center text-gray-500">
+        <div class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
             No decisions yet. The agent will make its first decision soon.
         </div>
         """
