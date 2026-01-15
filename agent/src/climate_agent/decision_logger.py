@@ -233,3 +233,106 @@ class DecisionLogger:
                 "action_breakdown": {row[0]: row[1] for row in actions},
                 "success_rate": round(success_rate, 1),
             }
+
+    async def get_timeline_data(self, days: int = 7) -> dict[str, Any]:
+        """Get decision timeline data for charting."""
+        async with aiosqlite.connect(self.db_path) as db:
+            # Get all decisions with temperature data for the time period
+            cursor = await db.execute(
+                """
+                SELECT
+                    timestamp,
+                    action,
+                    ai_temperature,
+                    baseline_action,
+                    baseline_temperature,
+                    decisions_match,
+                    weather_data,
+                    thermostat_state
+                FROM decisions
+                WHERE timestamp >= datetime('now', ?)
+                ORDER BY timestamp ASC
+                """,
+                (f'-{days} days',),
+            )
+            rows = await cursor.fetchall()
+
+            timeline = []
+            for row in rows:
+                weather = json.loads(row[6]) if row[6] else {}
+                thermostat = json.loads(row[7]) if row[7] else {}
+
+                timeline.append({
+                    "timestamp": row[0],
+                    "action": row[1],
+                    "ai_temperature": row[2],
+                    "baseline_action": row[3],
+                    "baseline_temperature": row[4],
+                    "decisions_match": row[5],
+                    "outdoor_temp": weather.get("temperature_c"),
+                    "indoor_temp": thermostat.get("current_temperature"),
+                    "target_temp": thermostat.get("target_temperature"),
+                })
+
+            return {"timeline": timeline, "days": days}
+
+    async def get_hourly_stats(self) -> dict[str, Any]:
+        """Get decision breakdown by hour of day."""
+        async with aiosqlite.connect(self.db_path) as db:
+            # Decisions by hour
+            cursor = await db.execute(
+                """
+                SELECT
+                    CAST(strftime('%H', timestamp) AS INTEGER) as hour,
+                    COUNT(*) as total,
+                    SUM(CASE WHEN decisions_match = 0 THEN 1 ELSE 0 END) as overrides
+                FROM decisions
+                WHERE baseline_action IS NOT NULL
+                GROUP BY hour
+                ORDER BY hour
+                """
+            )
+            rows = await cursor.fetchall()
+
+            hourly = {}
+            for row in rows:
+                hourly[row[0]] = {
+                    "total": row[1],
+                    "overrides": row[2],
+                    "override_rate": round((row[2] / row[1] * 100), 1) if row[1] > 0 else 0
+                }
+
+            return {"hourly_stats": hourly}
+
+    async def get_daily_stats(self, days: int = 7) -> dict[str, Any]:
+        """Get daily decision statistics."""
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                """
+                SELECT
+                    DATE(timestamp) as date,
+                    COUNT(*) as total,
+                    SUM(CASE WHEN decisions_match = 0 THEN 1 ELSE 0 END) as overrides,
+                    SUM(CASE WHEN action = 'SET_TEMPERATURE' THEN 1 ELSE 0 END) as temp_changes,
+                    AVG(CASE WHEN ai_temperature IS NOT NULL THEN ai_temperature END) as avg_ai_temp
+                FROM decisions
+                WHERE timestamp >= datetime('now', ?)
+                GROUP BY DATE(timestamp)
+                ORDER BY date ASC
+                """,
+                (f'-{days} days',),
+            )
+            rows = await cursor.fetchall()
+
+            daily = []
+            for row in rows:
+                daily.append({
+                    "date": row[0],
+                    "total": row[1],
+                    "overrides": row[2],
+                    "override_rate": round((row[2] / row[1] * 100), 1) if row[1] > 0 else 0,
+                    "temp_changes": row[3],
+                    "avg_ai_temp": round(row[4], 1) if row[4] else None,
+                })
+
+            return {"daily_stats": daily, "days": days}

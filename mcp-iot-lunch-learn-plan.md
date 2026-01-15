@@ -305,6 +305,24 @@ But the AI looked at the *actual conditions*:
 
 **Highlight for audience:** "The AI overrode the rigid schedule because it considered the forecast. That's the difference between rule-based automation and contextual AI reasoning."
 
+### Real Example: Observed January 14, 2026 at 10:53 PM
+
+**Conditions:**
+- Time: 10:53 PM (after nighttime threshold)
+- Indoor temp: 21.3°C (target: 21.5°C)
+- Outdoor temp: -5.7°C (feels like -11.9°C due to wind)
+- Forecast: Dropping to -10.1°C with moderate snow
+
+**Baseline would do:** SET_TEMPERATURE → 18°C (time_based_schedule)
+
+**AI chose:** NO_CHANGE (keep at 21.5°C)
+
+**AI's reasoning:** "The house is warm at 21.3°C. With a cold front approaching (-10°C with snow), dropping to 18°C now would cause rapid cooling. The furnace would then have to work hard at midnight to recover. Better to maintain the current setpoint and let the house coast naturally."
+
+**Energy impact:**
+- Baseline: 21.5°C → 18°C drop at 10pm → rapid cooling → furnace struggles at midnight = more energy
+- AI: Maintain 21.5°C → gradual natural cooling → furnace maintains from warmer starting point = less energy
+
 ### Small Model Quirks (llama3.1:8b)
 
 **Good talking point for the demo:**
