@@ -53,10 +53,15 @@ PROMPTS_PAGE_HTML = """
                     <i data-lucide="file-text"></i> Agent Prompts
                  </h1>
             </div>
-             <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
-                <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
-                <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
-            </button>
+            <div class="flex items-center gap-4">
+                <a href="/chat" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i> Chat
+                </a>
+                <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                    <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
+                    <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
+                </button>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 gap-8" id="prompts-container">
@@ -233,10 +238,15 @@ SETTINGS_PAGE_HTML = """
                     <i data-lucide="settings"></i> Settings
                  </h1>
             </div>
-             <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
-                <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
-                <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
-            </button>
+            <div class="flex items-center gap-4">
+                <a href="/chat" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i> Chat
+                </a>
+                <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                    <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
+                    <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
+                </button>
+            </div>
         </div>
 
         <div id="settings-container" class="space-y-8">
@@ -402,6 +412,278 @@ SETTINGS_PAGE_HTML = """
 </html>
 """
 
+CHAT_PAGE_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Climate Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <style>
+        .chat-message {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .typing-indicator span {
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex flex-col">
+    <div class="container mx-auto px-4 py-4 flex-1 flex flex-col max-w-4xl">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <i data-lucide="message-circle"></i> Chat with Climate Agent
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">Ask questions about weather, thermostat, or request actions</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
+                    <i data-lucide="home" class="w-4 h-4"></i> Dashboard
+                </a>
+                <a href="/prompts" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
+                    <i data-lucide="file-edit" class="w-4 h-4"></i> Prompts
+                </a>
+                <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
+                    <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
+                    <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow flex-1 flex flex-col overflow-hidden">
+            <!-- Messages Area -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Welcome message -->
+                <div class="chat-message flex gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 inline-block">
+                            <p class="text-gray-800 dark:text-gray-200">Hello! I'm the Climate Agent. I can help you with:</p>
+                            <ul class="mt-2 text-sm text-gray-600 dark:text-gray-300 list-disc list-inside">
+                                <li>Check current weather and forecast</li>
+                                <li>View or change thermostat settings</li>
+                                <li>Explain my recent decisions</li>
+                                <li>Answer questions about energy optimization</li>
+                            </ul>
+                            <p class="mt-2 text-gray-800 dark:text-gray-200">What would you like to know?</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator (hidden by default) -->
+            <div id="typing-indicator" class="hidden px-4 pb-2">
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 inline-flex items-center gap-1">
+                        <div class="typing-indicator flex gap-1">
+                            <span class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
+                            <span class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
+                            <span class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t dark:border-gray-700 p-4">
+                <form id="chat-form" class="flex gap-2">
+                    <input
+                        type="text"
+                        id="chat-input"
+                        placeholder="Ask me anything about the climate system..."
+                        class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autocomplete="off"
+                    >
+                    <button
+                        type="submit"
+                        id="send-button"
+                        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>Send</span>
+                    </button>
+                </form>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <button class="quick-prompt px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full" data-prompt="What's the current weather?">
+                        Weather
+                    </button>
+                    <button class="quick-prompt px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full" data-prompt="What's the thermostat set to?">
+                        Thermostat
+                    </button>
+                    <button class="quick-prompt px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full" data-prompt="What's the forecast for the next 6 hours?">
+                        Forecast
+                    </button>
+                    <button class="quick-prompt px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full" data-prompt="Set temperature to 21 degrees">
+                        Set to 21°C
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Dark mode toggle
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        const themeToggleBtn = document.getElementById('theme-toggle');
+
+        function updateThemeIcons() {
+            if (document.documentElement.classList.contains('dark')) {
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                themeToggleLightIcon.classList.add('hidden');
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+        }
+        updateThemeIcons();
+
+        themeToggleBtn.addEventListener('click', function() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            updateThemeIcons();
+        });
+
+        // Chat functionality
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        function addMessage(content, isUser = false, toolCalls = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message flex gap-3';
+
+            const avatar = isUser
+                ? '<div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center"><i data-lucide="user" class="w-5 h-5 text-white"></i></div>'
+                : '<div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center"><i data-lucide="bot" class="w-5 h-5 text-white"></i></div>';
+
+            const bgClass = isUser ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-700';
+
+            let toolCallsHtml = '';
+            if (toolCalls && toolCalls.length > 0) {
+                toolCallsHtml = '<div class="mt-2 space-y-1">';
+                toolCalls.forEach(tc => {
+                    toolCallsHtml += `
+                        <div class="text-xs bg-gray-200 dark:bg-gray-600 rounded px-2 py-1 inline-flex items-center gap-1 mr-1">
+                            <i data-lucide="wrench" class="w-3 h-3"></i>
+                            <span class="font-mono">${tc.name}</span>
+                        </div>
+                    `;
+                });
+                toolCallsHtml += '</div>';
+            }
+
+            messageDiv.innerHTML = `
+                ${avatar}
+                <div class="flex-1">
+                    <div class="${bgClass} rounded-lg p-3 inline-block max-w-full">
+                        <p class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">${escapeHtml(content)}</p>
+                        ${toolCallsHtml}
+                    </div>
+                </div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            lucide.createIcons();
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function setLoading(loading) {
+            sendButton.disabled = loading;
+            chatInput.disabled = loading;
+            typingIndicator.classList.toggle('hidden', !loading);
+            if (loading) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        async function sendMessage(message) {
+            if (!message.trim()) return;
+
+            addMessage(message, true);
+            chatInput.value = '';
+            setLoading(true);
+
+            try {
+                const response = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    addMessage('Error: ' + data.error, false);
+                } else {
+                    addMessage(data.response, false, data.tool_calls);
+                }
+            } catch (error) {
+                addMessage('Failed to connect to the agent. Please try again.', false);
+                console.error('Chat error:', error);
+            } finally {
+                setLoading(false);
+                chatInput.focus();
+            }
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendMessage(chatInput.value);
+        });
+
+        // Quick prompt buttons
+        document.querySelectorAll('.quick-prompt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                sendMessage(btn.dataset.prompt);
+            });
+        });
+
+        // Focus input on load
+        chatInput.focus();
+    </script>
+</body>
+</html>
+"""
+
 DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html lang="en">
@@ -457,6 +739,9 @@ DASHBOARD_HTML = """
                  <p class="text-gray-600 dark:text-gray-400">AI-powered thermostat control vs traditional automation</p>
             </div>
             <div class="flex items-center gap-4">
+                <a href="/chat" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i> Chat
+                </a>
                 <a href="/prompts" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
                     <i data-lucide="file-edit" class="w-4 h-4"></i> Prompts
                 </a>
@@ -1215,6 +1500,88 @@ async def api_update_setting(key: str, request: Request):
     value = data.get("value")
     if value is None:
         return {"error": "Value required"}
-    
+
     await logger.update_setting(key, value)
     return {"status": "success", "key": key}
+
+
+@router.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request):
+    """Render the chat page."""
+    return HTMLResponse(content=CHAT_PAGE_HTML)
+
+
+@router.post("/api/chat/send")
+async def api_chat_send(request: Request):
+    """Send a message to the AI agent and get a response."""
+    import logging
+    chat_logger = logging.getLogger(__name__)
+
+    try:
+        data = await request.json()
+        message = data.get("message", "").strip()
+
+        if not message:
+            return {"error": "Message required"}
+
+        # Import the agent from main module
+        from . import main as agent_main
+        agent = agent_main.agent
+
+        if not agent.initialized:
+            return {"error": "Agent not initialized. Please wait for startup to complete."}
+
+        # Get the chat system prompt from DB (or use a default)
+        logger = DecisionLogger()
+        chat_system_prompt = await logger.get_prompt(
+            "chat_system_prompt",
+            """You are the Climate Agent assistant. You help users understand and control their home climate system.
+
+You have access to tools to:
+- Check current weather conditions
+- Get weather forecasts
+- View thermostat state
+- Adjust the thermostat temperature (only when explicitly asked)
+
+Be helpful, concise, and informative. When users ask about the weather or thermostat, use your tools to get real data.
+When users ask to change the temperature, confirm what you're doing.
+
+Always respond in English.""",
+            "System prompt for the interactive chat feature"
+        )
+
+        # Combine tools from both MCP clients
+        tools = []
+        tools.extend(agent.weather_client.get_tools_for_llm())
+        tools.extend(agent.ha_client.get_tools_for_llm())
+
+        # Tool executor that routes to the correct MCP client
+        async def execute_tool(name: str, arguments: dict):
+            chat_logger.info(f"Chat executing tool: {name} with args: {arguments}")
+
+            # Weather tools
+            if name in ["get_current_weather", "get_forecast"]:
+                return await agent.weather_client.call_tool(name, arguments)
+            # HA tools
+            elif name in ["get_thermostat_state", "set_thermostat_temperature", "set_hvac_mode", "set_preset_mode"]:
+                return await agent.ha_client.call_tool(name, arguments)
+            else:
+                return {"error": f"Unknown tool: {name}"}
+
+        # Call Ollama with tools
+        result = await agent.ollama.chat_with_tools(
+            user_message=message,
+            tools=tools,
+            tool_executor=execute_tool,
+            system_prompt=chat_system_prompt,
+            max_iterations=5
+        )
+
+        return {
+            "response": result.get("final_response", "No response generated"),
+            "tool_calls": result.get("tool_calls_made", [])
+        }
+
+    except Exception as e:
+        chat_logger.error(f"Chat error: {e}", exc_info=True)
+        return {"error": str(e)}
