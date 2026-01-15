@@ -7,13 +7,12 @@ FastAPI-based dashboard for viewing agent decisions and status.
 import os
 from datetime import datetime
 
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 
 from .decision_logger import DecisionLogger
 
-app = FastAPI(title="Climate Agent Dashboard")
+router = APIRouter()
 
 # Templates
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -509,54 +508,54 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
     return HTMLResponse(content=html)
 
 
-@app.get("/", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """Dashboard home page."""
     return await get_dashboard_html(request)
 
 
-@app.get("/health")
+@router.get("/health")
 async def health():
     """Health check endpoint."""
     return {"status": "healthy", "service": "climate-agent"}
 
 
-@app.get("/api/decisions")
+@router.get("/api/decisions")
 async def api_decisions(limit: int = 20):
     """API endpoint for decisions."""
     logger = DecisionLogger()
     return await logger.get_recent_decisions(limit=limit)
 
 
-@app.get("/api/stats")
+@router.get("/api/stats")
 async def api_stats():
     """API endpoint for stats."""
     logger = DecisionLogger()
     return await logger.get_decision_stats()
 
 
-@app.get("/api/comparison")
+@router.get("/api/comparison")
 async def api_comparison():
     """API endpoint for AI vs baseline comparison stats."""
     logger = DecisionLogger()
     return await logger.get_comparison_stats()
 
 
-@app.get("/api/timeline")
+@router.get("/api/timeline")
 async def api_timeline(days: int = 7):
     """API endpoint for timeline data."""
     logger = DecisionLogger()
     return await logger.get_timeline_data(days=days)
 
 
-@app.get("/api/daily")
+@router.get("/api/daily")
 async def api_daily(days: int = 7):
     """API endpoint for daily stats."""
     logger = DecisionLogger()
     return await logger.get_daily_stats(days=days)
 
 
-@app.get("/api/hourly")
+@router.get("/api/hourly")
 async def api_hourly():
     """API endpoint for hourly stats."""
     logger = DecisionLogger()

@@ -8,15 +8,17 @@ Includes baseline automation comparison to demonstrate AI vs rule-based decision
 import os
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 import uvicorn
+from fastapi import FastAPI
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .mcp_client import MCPClient
 from .ollama_client import OllamaClient
 from .decision_logger import DecisionLogger
-from .web_dashboard import app
+from .web_dashboard import router as dashboard_router
 
 # Configure logging
 logging.basicConfig(
@@ -369,7 +371,7 @@ def main():
     logger.info(f"Weather MCP: {WEATHER_MCP_URL}")
     logger.info(f"HA MCP: {HA_MCP_URL}")
     logger.info(f"Check interval: {CHECK_INTERVAL} minutes")
-    
+
     # Create scheduler
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
@@ -379,17 +381,21 @@ def main():
         id="climate_evaluation",
         name="Climate Evaluation",
     )
-    
-    # Add startup event
-    @app.on_event("startup")
-    async def on_startup():
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Lifespan context manager for startup/shutdown events."""
+        # Startup
         scheduler.start()
         asyncio.create_task(startup())
-    
-    @app.on_event("shutdown")
-    async def on_shutdown():
+        yield
+        # Shutdown
         scheduler.shutdown()
-    
+
+    # Create FastAPI app with lifespan
+    app = FastAPI(title="Climate Agent Dashboard", lifespan=lifespan)
+    app.include_router(dashboard_router)
+
     # Run the web server
     uvicorn.run(app, host="0.0.0.0", port=8080)
 
