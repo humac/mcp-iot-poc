@@ -721,20 +721,29 @@ DASHBOARD_HTML = """
                 const response = await fetch('/api/status');
                 const status = await response.json();
                 
-                const updateIcon = (id, key) => {
-                    const el = document.getElementById(id);
+                const updateIndicator = (wrapperId, key) => {
+                    const wrapper = document.getElementById(wrapperId);
+                    const svg = wrapper.querySelector('svg');
+                    const statusText = wrapper.querySelector('.status-text');
+                    
                     if (status[key]) {
-                        el.classList.remove('text-gray-300', 'text-red-500');
-                        el.classList.add('text-green-500');
+                        if (svg) svg.style.color = '#22c55e'; // green-500
+                        if (statusText) {
+                            statusText.textContent = 'UP';
+                            statusText.className = 'status-text text-xs font-medium text-green-500';
+                        }
                     } else {
-                        el.classList.remove('text-gray-300', 'text-green-500');
-                        el.classList.add('text-red-500');
+                        if (svg) svg.style.color = '#ef4444'; // red-500
+                        if (statusText) {
+                            statusText.textContent = 'DOWN';
+                            statusText.className = 'status-text text-xs font-medium text-red-500';
+                        }
                     }
                 };
 
-                updateIcon('status-ollama', 'ollama');
-                updateIcon('status-weather', 'weather');
-                updateIcon('status-ha', 'ha');
+                updateIndicator('indicator-ollama', 'ollama');
+                updateIndicator('indicator-weather', 'weather');
+                updateIndicator('indicator-ha', 'ha');
             } catch (e) {
                 console.error('Status check failed', e);
             }
@@ -742,7 +751,8 @@ DASHBOARD_HTML = """
         
         // Initial check and interval
         document.addEventListener('DOMContentLoaded', () => {
-             updateStatus();
+             // Wait for Lucide to render icons
+             setTimeout(updateStatus, 100);
              setInterval(updateStatus, 30000);
         });
     </script>
@@ -831,17 +841,20 @@ DASHBOARD_HTML = """
                     <i data-lucide="activity" class="w-5 h-5 text-gray-400"></i>
                 </div>
                 <div class="flex justify-between items-center mt-2" id="health-indicators">
-                    <div class="flex flex-col items-center gap-1" title="Brain (Ollama)">
-                        <i data-lucide="brain" id="status-ollama" class="w-6 h-6 text-gray-300"></i>
+                    <div id="indicator-ollama" class="flex flex-col items-center gap-1" title="Brain (Ollama)">
+                        <i data-lucide="brain" class="w-6 h-6 text-gray-400"></i>
                         <span class="text-xs text-gray-500">Brain</span>
+                        <span class="status-text text-xs font-medium text-gray-400">...</span>
                     </div>
-                    <div class="flex flex-col items-center gap-1" title="Weather Tools">
-                        <i data-lucide="cloud-sun" id="status-weather" class="w-6 h-6 text-gray-300"></i>
+                    <div id="indicator-weather" class="flex flex-col items-center gap-1" title="Weather Tools">
+                        <i data-lucide="cloud-sun" class="w-6 h-6 text-gray-400"></i>
                         <span class="text-xs text-gray-500">Weather</span>
+                        <span class="status-text text-xs font-medium text-gray-400">...</span>
                     </div>
-                    <div class="flex flex-col items-center gap-1" title="Home Control">
-                        <i data-lucide="home" id="status-ha" class="w-6 h-6 text-gray-300"></i>
+                    <div id="indicator-ha" class="flex flex-col items-center gap-1" title="Home Control">
+                        <i data-lucide="home" class="w-6 h-6 text-gray-400"></i>
                         <span class="text-xs text-gray-500">Home</span>
+                        <span class="status-text text-xs font-medium text-gray-400">...</span>
                     </div>
                 </div>
             </div>
