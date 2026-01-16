@@ -417,7 +417,7 @@ CHAT_PAGE_HTML = """
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chat - Climate Agent</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -430,6 +430,7 @@ CHAT_PAGE_HTML = """
         }
     </script>
     <style>
+        html, body { height: 100%; overflow: hidden; }
         .chat-message {
             animation: fadeIn 0.3s ease-in;
         }
@@ -446,63 +447,66 @@ CHAT_PAGE_HTML = """
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
+        /* iOS viewport fix */
+        @supports (-webkit-touch-callout: none) {
+            body { height: -webkit-fill-available; }
+        }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex flex-col">
-    <div class="container mx-auto px-4 py-4 flex-1 flex flex-col max-w-4xl">
+<body class="bg-gray-100 dark:bg-gray-900 flex flex-col">
+    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full overflow-hidden">
         <!-- Header -->
-        <div class="flex justify-between items-center mb-4">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                    <i data-lucide="message-circle"></i> Chat with Climate Agent
-                </h1>
-                <p class="text-gray-600 dark:text-gray-400 text-sm">Ask questions about weather, thermostat, or request actions</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <a href="/" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
-                    <i data-lucide="home" class="w-4 h-4"></i> Dashboard
-                </a>
-                <a href="/prompts" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
-                    <i data-lucide="file-edit" class="w-4 h-4"></i> Prompts
-                </a>
-                <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
-                    <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
-                    <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
-                </button>
+        <div class="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2 min-w-0">
+                    <i data-lucide="message-circle" class="w-5 h-5 sm:w-6 sm:h-6 text-gray-800 dark:text-gray-100 flex-shrink-0"></i>
+                    <h1 class="text-lg sm:text-2xl font-bold text-gray-800 dark:text-gray-100 truncate">Climate Agent</h1>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0">
+                    <a href="/" class="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Dashboard">
+                        <i data-lucide="home" class="w-5 h-5"></i>
+                    </a>
+                    <a href="/prompts" class="hidden sm:flex p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Prompts">
+                        <i data-lucide="file-edit" class="w-5 h-5"></i>
+                    </a>
+                    <button id="theme-toggle" type="button" class="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">
+                        <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
+                        <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- Chat Container -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 flex flex-col bg-white dark:bg-gray-800 mx-0 sm:mx-4 sm:mb-4 sm:rounded-lg shadow overflow-hidden min-h-0">
             <!-- Messages Area -->
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <!-- Welcome message -->
-                <div class="chat-message flex gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                        <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                <div class="chat-message flex gap-2 sm:gap-3">
+                    <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        <i data-lucide="bot" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
                     </div>
-                    <div class="flex-1">
-                        <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 inline-block">
-                            <p class="text-gray-800 dark:text-gray-200">Hello! I'm the Climate Agent. I can help you with:</p>
-                            <ul class="mt-2 text-sm text-gray-600 dark:text-gray-300 list-disc list-inside">
+                    <div class="flex-1 min-w-0">
+                        <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 sm:p-3 inline-block max-w-full">
+                            <p class="text-sm sm:text-base text-gray-800 dark:text-gray-200">Hello! I'm the Climate Agent. I can help you with:</p>
+                            <ul class="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300 list-disc list-inside">
                                 <li>Check current weather and forecast</li>
                                 <li>View or change thermostat settings</li>
                                 <li>Explain my recent decisions</li>
-                                <li>Answer questions about energy optimization</li>
                             </ul>
-                            <p class="mt-2 text-gray-800 dark:text-gray-200">What would you like to know?</p>
+                            <p class="mt-2 text-sm sm:text-base text-gray-800 dark:text-gray-200">What would you like to know?</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Typing Indicator (hidden by default) -->
-            <div id="typing-indicator" class="hidden px-4 pb-2">
-                <div class="flex gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                        <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+            <div id="typing-indicator" class="hidden px-3 sm:px-4 pb-2">
+                <div class="flex gap-2 sm:gap-3">
+                    <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        <i data-lucide="bot" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
                     </div>
-                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 inline-flex items-center gap-1">
+                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 sm:p-3 inline-flex items-center gap-1">
                         <div class="typing-indicator flex gap-1">
                             <span class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
                             <span class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
@@ -513,36 +517,36 @@ CHAT_PAGE_HTML = """
             </div>
 
             <!-- Input Area -->
-            <div class="border-t dark:border-gray-700 p-4">
+            <div class="flex-shrink-0 border-t dark:border-gray-700 p-2 sm:p-4 bg-white dark:bg-gray-800">
                 <form id="chat-form" class="flex gap-2">
                     <input
                         type="text"
                         id="chat-input"
-                        placeholder="Ask me anything about the climate system..."
-                        class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ask about weather, thermostat..."
+                        class="flex-1 min-w-0 px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         autocomplete="off"
                     >
                     <button
                         type="submit"
                         id="send-button"
-                        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="flex-shrink-0 px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <i data-lucide="send" class="w-4 h-4"></i>
-                        <span>Send</span>
+                        <i data-lucide="send" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                        <span class="hidden sm:inline ml-2">Send</span>
                     </button>
                 </form>
-                <div class="mt-2 flex flex-wrap gap-2">
-                    <button class="quick-prompt px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full" data-prompt="What's the current weather?">
+                <div class="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
+                    <button class="quick-prompt px-2 sm:px-3 py-1 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors" data-prompt="What's the current weather?">
                         Weather
                     </button>
-                    <button class="quick-prompt px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full" data-prompt="What's the thermostat set to?">
+                    <button class="quick-prompt px-2 sm:px-3 py-1 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors" data-prompt="What's the thermostat set to?">
                         Thermostat
                     </button>
-                    <button class="quick-prompt px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full" data-prompt="What's the forecast for the next 6 hours?">
+                    <button class="quick-prompt px-2 sm:px-3 py-1 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors" data-prompt="What's the forecast for the next 6 hours?">
                         Forecast
                     </button>
-                    <button class="quick-prompt px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full" data-prompt="Set temperature to 21 degrees">
-                        Set to 21°C
+                    <button class="quick-prompt px-2 sm:px-3 py-1 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors" data-prompt="Set temperature to 21 degrees">
+                        Set 21°C
                     </button>
                 </div>
             </div>
@@ -583,20 +587,20 @@ CHAT_PAGE_HTML = """
 
         function addMessage(content, isUser = false, toolCalls = null) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = 'chat-message flex gap-3';
+            messageDiv.className = 'chat-message flex gap-2 sm:gap-3';
 
             const avatar = isUser
-                ? '<div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center"><i data-lucide="user" class="w-5 h-5 text-white"></i></div>'
-                : '<div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center"><i data-lucide="bot" class="w-5 h-5 text-white"></i></div>';
+                ? '<div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-green-500 flex items-center justify-center"><i data-lucide="user" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i></div>'
+                : '<div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center"><i data-lucide="bot" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i></div>';
 
             const bgClass = isUser ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-700';
 
             let toolCallsHtml = '';
             if (toolCalls && toolCalls.length > 0) {
-                toolCallsHtml = '<div class="mt-2 space-y-1">';
+                toolCallsHtml = '<div class="mt-2 flex flex-wrap gap-1">';
                 toolCalls.forEach(tc => {
                     toolCallsHtml += `
-                        <div class="text-xs bg-gray-200 dark:bg-gray-600 rounded px-2 py-1 inline-flex items-center gap-1 mr-1">
+                        <div class="text-xs bg-gray-200 dark:bg-gray-600 rounded px-2 py-1 inline-flex items-center gap-1">
                             <i data-lucide="wrench" class="w-3 h-3"></i>
                             <span class="font-mono">${tc.name}</span>
                         </div>
@@ -607,9 +611,9 @@ CHAT_PAGE_HTML = """
 
             messageDiv.innerHTML = `
                 ${avatar}
-                <div class="flex-1">
-                    <div class="${bgClass} rounded-lg p-3 inline-block max-w-full">
-                        <p class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">${escapeHtml(content)}</p>
+                <div class="flex-1 min-w-0">
+                    <div class="${bgClass} rounded-lg p-2 sm:p-3 inline-block max-w-full">
+                        <p class="text-sm sm:text-base text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">${escapeHtml(content)}</p>
                         ${toolCallsHtml}
                     </div>
                 </div>
