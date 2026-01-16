@@ -62,6 +62,10 @@ jobs:
     if: github.event_name != 'pull_request'
 
     steps:
-      - name: Trigger Portainer Stack Update
+      - name: Trigger Portainer Deploy
         run: |
-          curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
+          curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}" \
+          -H "x-gh-action-auth: ${{ secrets.MY_CF_BYPASS_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0" \
+          --fail --verbose
