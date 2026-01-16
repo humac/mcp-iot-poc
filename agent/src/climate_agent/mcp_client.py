@@ -17,9 +17,10 @@ logger = logging.getLogger(__name__)
 class MCPClient:
     """Client for communicating with MCP servers over HTTP."""
     
-    def __init__(self, server_url: str, server_name: str = "mcp-server") -> None:
+    def __init__(self, server_url: str, server_name: str = "mcp-server", auth_token: str = "") -> None:
         self.server_url: str = server_url.rstrip("/")
         self.server_name: str = server_name
+        self.auth_token: str = auth_token
         self.tools: list[dict[str, Any]] = []
     
     @retry(
@@ -30,10 +31,15 @@ class MCPClient:
     )
     async def _make_request(self, payload: dict, timeout: float = 30.0) -> dict:
         """Make HTTP request with retry logic."""
+        headers = {}
+        if self.auth_token:
+            headers["Authorization"] = f"Bearer {self.auth_token}"
+        
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.server_url}/mcp",
                 json=payload,
+                headers=headers,
                 timeout=timeout,
             )
             response.raise_for_status()

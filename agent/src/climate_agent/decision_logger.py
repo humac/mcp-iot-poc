@@ -74,6 +74,16 @@ class DecisionLogger:
                 updated_at TEXT
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS security_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                source TEXT,
+                details TEXT,
+                blocked INTEGER DEFAULT 1
+            )
+        """)
         await db.commit()
         logger.info(f"Database initialized at {self.db_path}")
     
@@ -446,3 +456,88 @@ class DecisionLogger:
             cursor = await db.execute("SELECT * FROM settings ORDER BY category, key")
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
+
+    async def log_security_event(
+        self,
+        event_type: str,
+        source: str,
+        details: dict = None,
+        blocked: bool = True
+    ) -> int:
+        """Log a security event to the database."""
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                """
+                INSERT INTO security_events (timestamp, event_type, source, details, blocked)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    datetime.now().isoformat(),
+                    event_type,
+                    source,
+                    json.dumps(details) if details else None,
+                    1 if blocked else 0,
+                ),
+            )
+            await db.commit()
+            logger.info(f"Logged security event: {event_type} from {source}")
+            return cursor.lastrowid
+
+    async def get_security_stats(self) -> dict[str, Any]:
+        """Get security event statistics."""
+        async with aiosqlite.connect(self.db_path) as db:
+            # Total events
+            cursor = await db.execute("SELECT COUNT(*) FROM security_events")
+            total = (await cursor.fetchone())[0]
+
+            # Blocked actions
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM security_events WHERE event_type = 'blocked_action'"
+            )
+            blocked_actions = (await cursor.fetchone())[0]
+
+            # Validation failures
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM security_events WHERE event_type = 'validation_failure'"
+            )
+            validation_failures = (await cursor.fetchone())[0]
+
+            # Auth failures
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM security_events WHERE event_type = 'auth_failure'"
+            )
+            auth_failures = (await cursor.fetchone())[0]
+
+            # Injection tests
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM security_events WHERE event_type = 'injection_test'"
+            )
+            injection_tests = (await cursor.fetchone())[0]
+
+            # Recent events
+            cursor = await db.execute(
+                """
+                SELECT timestamp, event_type, source, details, blocked
+                FROM security_events
+                ORDER BY timestamp DESC
+                LIMIT 10
+                """
+            )
+            recent = []
+            for row in await cursor.fetchall():
+                recent.append({
+                    "timestamp": row[0],
+                    "event_type": row[1],
+                    "source": row[2],
+                    "details": json.loads(row[3]) if row[3] else None,
+                    "blocked": bool(row[4]),
+                })
+
+            return {
+                "total_events": total,
+                "blocked_actions": blocked_actions,
+                "validation_failures": validation_failures,
+                "auth_failures": auth_failures,
+                "injection_tests": injection_tests,
+                "recent_events": recent,
+            }

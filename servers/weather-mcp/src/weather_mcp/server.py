@@ -25,6 +25,12 @@ import uvicorn
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Optional MCP authentication token - if set, all /mcp requests must include this token
+MCP_AUTH_TOKEN = os.getenv("MCP_AUTH_TOKEN", "")
+
+# Track security events for metrics
+security_events = {"auth_failures": 0, "validation_failures": 0}
+
 # Configuration from environment - REQUIRED
 LATITUDE_STR = os.getenv("LATITUDE")
 LONGITUDE_STR = os.getenv("LONGITUDE")
@@ -237,6 +243,17 @@ async def health_check(request):
 
 async def handle_mcp_post(request):
     """Handle MCP JSON-RPC requests via POST."""
+    # Authentication check
+    if MCP_AUTH_TOKEN:
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer ") or auth_header[7:] != MCP_AUTH_TOKEN:
+            security_events["auth_failures"] += 1
+            logger.warning(f"MCP auth failure from {request.client.host}")
+            return JSONResponse(
+                {"error": "Unauthorized", "message": "Invalid or missing bearer token"},
+                status_code=401
+            )
+
     try:
         body = await request.json()
         logger.info(f"MCP request: {body}")
