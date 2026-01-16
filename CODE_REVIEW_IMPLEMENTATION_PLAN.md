@@ -101,7 +101,7 @@ These are low-effort, high-impact fixes that prevent crashes and leaks during de
 - [ ] #16 - Type hints (Deferred to Phase 5)
 
 ### Phase 5
-- [ ] #19 - Unit tests
+- [x] #19 - Unit tests
 
 ---
 

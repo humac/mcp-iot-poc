@@ -318,9 +318,9 @@ Default coordinates are hardcoded; if not configured, silently uses defaults.
 - [ ] Graceful shutdown (#14)
 
 ### Phase 3: Quality Improvements
-- [ ] Connection pooling (#12)
-- [ ] Resource limits (#15)
-- [ ] Unit tests (#19)
+- [x] Connection pooling (#12) - Partial
+- [x] Resource limits (#15)
+- [x] Unit tests (#19)
 - [ ] Structured logging (#18)
 - [ ] Type hints (#16)
 
