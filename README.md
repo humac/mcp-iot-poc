@@ -110,6 +110,12 @@ OLLAMA_MODEL=ministral-3:14b
 CHECK_INTERVAL_MINUTES=30
 MIN_TEMP=17
 MAX_TEMP=23
+OLLAMA_TIMEOUT=120
+LOG_FORMAT=text
+
+# Dashboard Auth (Optional)
+DASHBOARD_USER=admin
+DASHBOARD_PASS=secret
 
 # Location (for weather)
 LATITUDE=45.35
@@ -180,7 +186,8 @@ mcp-iot-poc/
 │       ├── mcp_client.py       # MCP protocol client
 │       ├── ollama_client.py    # LLM integration
 │       ├── decision_logger.py  # SQLite logging
-│       └── web_dashboard.py    # FastAPI dashboard
+│       ├── web_dashboard.py    # FastAPI dashboard
+│       └── tests/              # Unit tests
 │
 ├── config/
 │   └── system_prompt.md        # Agent's instructions
@@ -268,6 +275,40 @@ curl -X POST http://localhost:8081/mcp \
 - `GET /api/decisions` - Recent decisions (JSON)
 - `GET /api/stats` - Decision statistics
 - `GET /api/comparison` - AI vs baseline comparison stats
+
+## 🧪 Testing & Quality
+
+The project includes a comprehensive test suite using `pytest`.
+
+```bash
+# Run tests locally
+cd agent
+pip install -e ".[dev]"
+pytest tests/ -v --cov=src --cov-report=term-missing
+```
+
+**Quality Features:**
+- **CI/CD**: GitHub Actions pipeline runs tests on every push.
+- **Coverage**: Minimum 45% code coverage enforced.
+- **Type Hints**: Core modules are fully typed.
+- **Linting**: Windsurf/Cursor rules enforced.
+
+## 🏭 Production Readiness
+
+### 🛡️ Security
+- **OAuth2**: All internal service communication is authenticated.
+- **Basic Auth**: Dashboard can be protected with `DASHBOARD_USER`/`PASS`.
+- **Input Validation**: LLM tool calls are rigorously validated.
+
+### 📊 Observability
+- **Structured Logging**: Set `LOG_FORMAT=json` for machine-readable logs.
+- **Health Checks**: All services have health endpoints.
+- **Resource Limits**: Docker containers have CPU/memory limits.
+
+### 🔄 Reliability
+- **Retries**: HTTP calls use exponential backoff (via `tenacity`).
+- **Timeouts**: All external calls have configurable timeouts (e.g. `OLLAMA_TIMEOUT`).
+- **Graceful Shutdown**: Agent handles termination signals via `lifespan`.
 
 ## 🎓 How It Works
 
