@@ -1,13 +1,16 @@
 
 import pytest
 from unittest.mock import AsyncMock, patch
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.climate_agent.web_dashboard import router
 from src.climate_agent.main import agent
 
-# Create a test client
-client = TestClient(router)
+# Create a test app
+app = FastAPI()
+app.include_router(router)
+client = TestClient(app)
 
 
 @pytest.mark.asyncio
@@ -15,7 +18,7 @@ async def test_api_status_success():
     """Test /api/status endpoint when everything is healthy."""
     
     # Mock agent components
-    with patch("src.climate_agent.web_dashboard.agent_main.agent") as mock_agent:
+    with patch("src.climate_agent.main.agent") as mock_agent:
         mock_agent.initialized = True
         
         # Mock health checks
@@ -38,7 +41,7 @@ async def test_api_status_success():
 async def test_api_status_partial_failure():
     """Test /api/status endpoint when some components fail."""
     
-    with patch("src.climate_agent.web_dashboard.agent_main.agent") as mock_agent:
+    with patch("src.climate_agent.main.agent") as mock_agent:
         mock_agent.initialized = True
         
         # Mock health checks (Ollama fails)
@@ -61,7 +64,7 @@ async def test_api_status_partial_failure():
 async def test_api_status_not_initialized():
     """Test /api/status endpoint when agent is not initialized."""
     
-    with patch("src.climate_agent.web_dashboard.agent_main.agent") as mock_agent:
+    with patch("src.climate_agent.main.agent") as mock_agent:
         mock_agent.initialized = False
         
         # Make request
