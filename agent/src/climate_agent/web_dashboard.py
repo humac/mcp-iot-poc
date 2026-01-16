@@ -734,25 +734,29 @@ DASHBOARD_HTML = """
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 min-h-screen transition-colors duration-200">
-    <div class="container mx-auto px-4 py-8">
-        <div class="flex justify-between items-center mb-8">
-            <div>
-                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-3">
-                    <i data-lucide="thermometer"></i> Climate Agent Dashboard
+    <div class="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-8">
+            <div class="min-w-0">
+                 <h1 class="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-1 sm:mb-2 flex items-center gap-2 sm:gap-3">
+                    <i data-lucide="thermometer" class="w-5 h-5 sm:w-auto sm:h-auto flex-shrink-0"></i>
+                    <span class="truncate">Climate Agent</span>
                  </h1>
-                 <p class="text-gray-600 dark:text-gray-400">AI-powered thermostat control vs traditional automation</p>
+                 <p class="text-xs sm:text-base text-gray-600 dark:text-gray-400 hidden sm:block">AI-powered thermostat control vs traditional automation</p>
             </div>
-            <div class="flex items-center gap-4">
-                <a href="/chat" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
-                    <i data-lucide="message-circle" class="w-4 h-4"></i> Chat
+            <div class="flex items-center gap-1 sm:gap-4 flex-shrink-0">
+                <a href="/chat" class="p-2 sm:px-3 sm:py-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-1 sm:gap-2 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg" title="Chat">
+                    <i data-lucide="message-circle" class="w-5 h-5 sm:w-4 sm:h-4"></i>
+                    <span class="hidden sm:inline">Chat</span>
                 </a>
-                <a href="/prompts" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
-                    <i data-lucide="file-edit" class="w-4 h-4"></i> Prompts
+                <a href="/prompts" class="p-2 sm:px-3 sm:py-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-1 sm:gap-2 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg" title="Prompts">
+                    <i data-lucide="file-edit" class="w-5 h-5 sm:w-4 sm:h-4"></i>
+                    <span class="hidden sm:inline">Prompts</span>
                 </a>
-                <a href="/settings" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-2">
-                    <i data-lucide="settings" class="w-4 h-4"></i> Settings
+                <a href="/settings" class="p-2 sm:px-3 sm:py-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-1 sm:gap-2 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg" title="Settings">
+                    <i data-lucide="settings" class="w-5 h-5 sm:w-4 sm:h-4"></i>
+                    <span class="hidden sm:inline">Settings</span>
                 </a>
-                <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                <button id="theme-toggle" type="button" class="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                     <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
                     <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
                 </button>
