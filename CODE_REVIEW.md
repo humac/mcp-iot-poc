@@ -16,7 +16,7 @@ This is a well-structured prototype demonstrating MCP with local LLM inference. 
 
 ### 1. Credential Exposure in Logs
 **File:** `servers/homeassistant-mcp/src/ha_mcp/server.py:264`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 MCP requests containing auth tokens are logged:
 ```python
@@ -50,7 +50,7 @@ if not HA_TOKEN:
 - `servers/weather-mcp/src/weather_mcp/server.py:62`
 - `servers/homeassistant-mcp/src/ha_mcp/server.py:51`
 
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 HTTP requests can hang indefinitely:
 ```python
@@ -66,7 +66,7 @@ async with httpx.AsyncClient(timeout=10.0) as client:
 
 ### 4. Unhandled Exception Swallowing
 **File:** `agent/src/climate_agent/main.py:299-305`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 Generic exception catch loses traceback:
 ```python
@@ -167,7 +167,7 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 - `servers/homeassistant-mcp/src/ha_mcp/server.py:322`
 - `servers/weather-mcp/src/weather_mcp/server.py:263`
 
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 ```python
 app = Starlette(debug=True, ...)  # Should be False in production
@@ -306,16 +306,16 @@ Default coordinates are hardcoded; if not configured, silently uses defaults.
 ## Implementation Priority
 
 ### Phase 1: Before Demo (Immediate)
-- [ ] Add timeouts to HTTP calls (#3)
-- [ ] Remove token logging (#1)
-- [ ] Use `logger.exception()` for error tracebacks (#4)
+- [x] Add timeouts to HTTP calls (#3)
+- [x] Remove token logging (#1)
+- [x] Use `logger.exception()` for error tracebacks (#4)
+- [x] Disable debug mode (#11)
 
 ### Phase 2: Before Production
 - [ ] Add dashboard authentication (#10)
 - [ ] Config validation at startup (#2)
 - [ ] Retry logic with backoff (#6)
 - [ ] Graceful shutdown (#14)
-- [ ] Disable debug mode (#11)
 
 ### Phase 3: Quality Improvements
 - [ ] Connection pooling (#12)

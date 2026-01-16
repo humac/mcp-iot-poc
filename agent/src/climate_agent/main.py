@@ -479,7 +479,7 @@ REMINDER: Always respond in English. Do not use Chinese or any other language.""
             logger.info(f"Reasoning: {result.get('final_response', '')[:200]}")
             
         except Exception as e:
-            logger.error(f"Evaluation error: {e}")
+            logger.exception("Evaluation error")
             await self.logger.log_decision(
                 action="ERROR",
                 reasoning=str(e),

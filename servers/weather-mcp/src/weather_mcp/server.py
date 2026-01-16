@@ -58,7 +58,7 @@ async def fetch_weather(hours: int = 24) -> dict[str, Any]:
         "forecast_hours": hours,
     }
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(OPEN_METEO_URL, params=params)
         response.raise_for_status()
         return response.json()
@@ -277,8 +277,9 @@ async def handle_sse(request):
 
 
 # Create Starlette app
+DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true"
 app = Starlette(
-    debug=True,
+    debug=DEBUG_MODE,
     routes=[
         Route("/health", health_check, methods=["GET"]),
         Route("/mcp", handle_mcp_post, methods=["POST"]),

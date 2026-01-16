@@ -43,6 +43,27 @@ def get_headers() -> dict[str, str]:
     }
 
 
+def sanitize_log_data(data: Any) -> Any:
+    """Remove sensitive data from logs."""
+    if isinstance(data, dict):
+        sanitized = {}
+        for key, value in data.items():
+            lower_key = key.lower()
+            if any(sensitive in lower_key for sensitive in ['token', 'password', 'secret', 'auth', 'key', 'bearer']):
+                sanitized[key] = '[REDACTED]'
+            else:
+                sanitized[key] = sanitize_log_data(value)
+        return sanitized
+    elif isinstance(data, list):
+        return [sanitize_log_data(item) for item in data]
+    elif isinstance(data, str):
+        # Redact anything that looks like a bearer token
+        if data.startswith('Bearer ') or len(data) > 100:
+            return '[REDACTED]'
+        return data
+    return data
+
+
 async def get_entity_state() -> dict[str, Any]:
     """Get current state of the climate entity."""
     url = f"{HA_URL}/api/states/{HA_ENTITY_ID}"
@@ -261,7 +282,7 @@ async def handle_mcp_post(request):
     """Handle MCP JSON-RPC requests via POST."""
     try:
         body = await request.json()
-        logger.info(f"MCP request: {body}")
+        logger.info(f"MCP request: {sanitize_log_data(body)}")
         
         method = body.get("method", "")
         params = body.get("params", {})
@@ -318,8 +339,9 @@ async def handle_sse(request):
 
 
 # Create Starlette app
+DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true"
 app = Starlette(
-    debug=True,
+    debug=DEBUG_MODE,
     routes=[
         Route("/health", health_check, methods=["GET"]),
         Route("/mcp", handle_mcp_post, methods=["POST"]),
