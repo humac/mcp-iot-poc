@@ -68,6 +68,7 @@ services:
       - TIMEZONE=${TIMEZONE:-America/Toronto}
       - DASHBOARD_USER=${DASHBOARD_USER:-}
       - DASHBOARD_PASS=${DASHBOARD_PASS:-}
+      - LOG_FORMAT=${LOG_FORMAT:-text}
     volumes:
       - agent-data:/app/data
     depends_on:

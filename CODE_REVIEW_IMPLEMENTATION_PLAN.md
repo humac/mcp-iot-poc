@@ -97,8 +97,8 @@ These are low-effort, high-impact fixes that prevent crashes and leaks during de
 - [ ] #12 - Database connection pooling (Deferred - SQLite local connections are lightweight)
 - [x] #15 - Docker resource limits
 - [x] #17 - Extract magic numbers to config
-- [ ] #18 - Structured logging (Deferred to Phase 5)
-- [ ] #16 - Type hints (Deferred to Phase 5)
+- [x] #18 - Structured logging
+- [ ] #16 - Type hints (Deferred)
 
 ### Phase 5
 - [x] #19 - Unit tests

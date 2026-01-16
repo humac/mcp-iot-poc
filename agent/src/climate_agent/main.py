@@ -22,11 +22,23 @@ from .ollama_client import OllamaClient
 from .decision_logger import DecisionLogger
 from .web_dashboard import router as dashboard_router
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Configure logging - JSON format for production, text for development
+LOG_FORMAT = os.getenv("LOG_FORMAT", "text")  # 'json' or 'text'
+
+if LOG_FORMAT == "json":
+    from pythonjsonlogger import jsonlogger
+    handler = logging.StreamHandler()
+    handler.setFormatter(jsonlogger.JsonFormatter(
+        "%(asctime)s %(name)s %(levelname)s %(message)s",
+        rename_fields={"asctime": "timestamp", "levelname": "level"}
+    ))
+    logging.root.handlers = [handler]
+    logging.root.setLevel(logging.INFO)
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 logger = logging.getLogger(__name__)
 
 # Configuration

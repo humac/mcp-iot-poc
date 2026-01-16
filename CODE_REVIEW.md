@@ -262,7 +262,7 @@ timeout=120.0,  # Why 120? Not configurable
 
 ### 18. No Structured Logging
 **Files:** All
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 Logs use string formatting which is hard to parse/query.
 

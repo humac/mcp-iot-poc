@@ -9,7 +9,7 @@ AI-powered thermostat control using Model Context Protocol (MCP). Compares AI de
 **Stack:**
 - **Agent**: Python 3.11, FastAPI, APScheduler, SQLite
 - **MCP Servers**: Python 3.11, Starlette, httpx, mcp-sdk
-- **LLM**: Ollama (llama3.1:8b) - external dependency
+- **LLM**: Ollama (ministral-3:14b recommended) - external dependency
 - **Infrastructure**: Docker Compose
 
 ## Architecture
@@ -28,19 +28,18 @@ mcp-iot-poc/
 3. **MCP Protocol**: Use JSON-RPC 2.0 over HTTP POST to `/mcp`
 4. **Tool Validation**: LLMs may pass invalid params - always validate inputs
 5. **Async Only**: All HTTP calls must be async with `httpx.AsyncClient`
-6. **No Tests Yet**: Phase 5 will add tests - for now, test via Docker
+6. **Retry Logic**: Use `tenacity` for HTTP retries with exponential backoff
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `agent/src/climate_agent/main.py` | Agent loop, scheduler, baseline comparison |
-| `agent/src/climate_agent/mcp_client.py` | MCP protocol client |
+| `agent/src/climate_agent/mcp_client.py` | MCP protocol client with retries |
 | `agent/src/climate_agent/ollama_client.py` | LLM integration |
 | `agent/src/climate_agent/decision_logger.py` | SQLite logging + settings storage |
-| `agent/src/climate_agent/web_dashboard.py` | FastAPI routes + Jinja2 templates |
-| `servers/*/src/*/server.py` | MCP server implementations (Starlette) |
-| `docker-compose.yml` | Container orchestration |
+| `agent/src/climate_agent/web_dashboard.py` | FastAPI routes + HTML templates |
+| `servers/*/src/*/server.py` | MCP server implementations |
 
 ## Development Commands
 
@@ -51,59 +50,62 @@ docker-compose up -d
 # View logs
 docker-compose logs -f agent
 
+# Run tests
+cd agent && pip install -e ".[dev]" && pytest tests/ -v
+
 # Test MCP servers
 curl http://localhost:8081/health  # weather-mcp
 curl http://localhost:8082/health  # homeassistant-mcp
-
-# Call MCP tool
-curl -X POST http://localhost:8081/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'
 ```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `HA_URL` | Yes | Home Assistant URL |
+| `HA_TOKEN` | Yes | HA long-lived access token |
+| `OLLAMA_URL` | Yes | Ollama API endpoint |
+| `LATITUDE` | Yes | Location latitude (weather) |
+| `LONGITUDE` | Yes | Location longitude (weather) |
+| `DASHBOARD_USER` | No | Dashboard basic auth username |
+| `DASHBOARD_PASS` | No | Dashboard basic auth password |
+| `LOG_FORMAT` | No | `text` (default) or `json` |
 
 ## Common Patterns
 
 ### Adding a new MCP tool
-1. Add `Tool()` to `list_tools()` in `server.py`
-2. Handle in `call_tool()` switch statement
-3. Include input validation for LLM quirks (they send wrong types!)
-
-### Adding a new dashboard setting
-Use `DecisionLogger.get_setting()` - auto-creates missing settings:
 ```python
-value = await self.logger.get_setting(
-    "key", 
-    "default", 
-    "Description for UI", 
-    "Category"
-)
+# In server.py list_tools():
+Tool(name="tool_name", description="...", inputSchema={...})
+
+# In call_tool():
+elif name == "tool_name":
+    # validate and execute
 ```
 
-### Making HTTP requests
-Always use async client with timeout:
+### Adding a dashboard setting
 ```python
-async with httpx.AsyncClient(timeout=10.0) as client:
-    response = await client.get(url, headers=headers)
-    response.raise_for_status()
+value = await self.logger.get_setting("key", "default", "Description", "Category")
 ```
 
 ## Code Review Status
 
-Tracked in `CODE_REVIEW.md` and `CODE_REVIEW_IMPLEMENTATION_PLAN.md`:
+All phases complete! See `CODE_REVIEW.md` for details.
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Phase 1 | ✅ Complete | Demo fixes (timeouts, logging) |
-| Phase 2 | 🔄 In Progress | Reliability (retries, shutdown) |
-| Phase 3 | ⏳ Pending | Security (auth, validation) |
-| Phase 4 | ⏳ Pending | Quality (pooling, types) |
-| Phase 5 | ⏳ Pending | Testing (pytest, coverage) |
+| Phase | Status |
+|-------|--------|
+| Phase 1 (Demo fixes) | ✅ Complete |
+| Phase 2 (Reliability) | ✅ Complete |
+| Phase 3 (Security) | ✅ Complete |
+| Phase 4 (Quality) | ✅ Complete |
+| Phase 5 (Testing) | ✅ Complete |
 
-## Agent Helper Files
+## Testing
 
-This project includes agent-specific instruction files:
-- `GEMINI.md` - Google Gemini / Jules
-- `CLAUDE.md` - Anthropic Claude
-- `.cursorrules` - Cursor IDE
-- `.github/copilot-instructions.md` - GitHub Copilot
-- `.windsurfrules` - Windsurf (Codeium)
+Tests are in `agent/tests/` using pytest:
+- `test_baseline_automation.py` - Decision logic
+- `test_mcp_client.py` - MCP communication
+- `test_ollama_client.py` - LLM integration
+- `test_decision_logger.py` - Database operations
+
+CI runs tests automatically on push via GitHub Actions.
