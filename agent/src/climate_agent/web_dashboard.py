@@ -714,6 +714,37 @@ DASHBOARD_HTML = """
 
         // Auto-refresh every 60 seconds
         setTimeout(() => location.reload(), 60000);
+
+        // Fetch status every 30 seconds
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                const updateIcon = (id, key) => {
+                    const el = document.getElementById(id);
+                    if (status[key]) {
+                        el.classList.remove('text-gray-300', 'text-red-500');
+                        el.classList.add('text-green-500');
+                    } else {
+                        el.classList.remove('text-gray-300', 'text-green-500');
+                        el.classList.add('text-red-500');
+                    }
+                };
+
+                updateIcon('status-ollama', 'ollama');
+                updateIcon('status-weather', 'weather');
+                updateIcon('status-ha', 'ha');
+            } catch (e) {
+                console.error('Status check failed', e);
+            }
+        }
+        
+        // Initial check and interval
+        document.addEventListener('DOMContentLoaded', () => {
+             updateStatus();
+             setInterval(updateStatus, 30000);
+        });
     </script>
     <style>
         /* Custom scrollbar for dark mode if needed */
@@ -796,10 +827,23 @@ DASHBOARD_HTML = """
             </div>
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <div class="flex items-center justify-between mb-2">
-                    <div class="text-sm text-gray-500 dark:text-gray-400">Status</div>
-                    <i data-lucide="power" class="w-5 h-5 text-green-500"></i>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">System Health</div>
+                    <i data-lucide="activity" class="w-5 h-5 text-gray-400"></i>
                 </div>
-                <div class="text-3xl font-bold text-green-500 dark:text-green-400">Running</div>
+                <div class="flex justify-between items-center mt-2" id="health-indicators">
+                    <div class="flex flex-col items-center gap-1" title="Brain (Ollama)">
+                        <i data-lucide="brain" id="status-ollama" class="w-6 h-6 text-gray-300"></i>
+                        <span class="text-xs text-gray-500">Brain</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1" title="Weather Tools">
+                        <i data-lucide="cloud-sun" id="status-weather" class="w-6 h-6 text-gray-300"></i>
+                        <span class="text-xs text-gray-500">Weather</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1" title="Home Control">
+                        <i data-lucide="home" id="status-ha" class="w-6 h-6 text-gray-300"></i>
+                        <span class="text-xs text-gray-500">Home</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1460,6 +1504,39 @@ async def api_hourly():
     """API endpoint for hourly stats."""
     logger = DecisionLogger()
     return await logger.get_hourly_stats()
+
+
+@router.get("/api/status")
+async def api_status():
+    """Get health status of agent components."""
+    from . import main as agent_main
+    agent = agent_main.agent
+    
+    # Defaults if agent not initialized
+    status = {
+        "ollama": False,
+        "weather": False,
+        "ha": False
+    }
+    
+    if agent.initialized:
+        # Check components in parallel
+        # Note: We're doing real checks here, which might be slow. 
+        # For production, we might want to cache these or run in background.
+        import asyncio
+        results = await asyncio.gather(
+            agent.ollama.health_check(),
+            agent.weather_client.health_check(),
+            agent.ha_client.health_check(),
+            return_exceptions=True
+        )
+        
+        status["ollama"] = results[0] if isinstance(results[0], bool) else False
+        status["weather"] = results[1] if isinstance(results[1], bool) else False
+        status["ha"] = results[2] if isinstance(results[2], bool) else False
+            
+    return status
+
 
 @router.get("/prompts", response_class=HTMLResponse)
 async def prompts_page(request: Request):
