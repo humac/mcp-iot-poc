@@ -277,6 +277,7 @@ REMINDER: Always respond in English. Do not use Chinese or any other language.""
         await self.logger.get_setting("agent_min_temp", "17.0", "Minimum allowed thermostat temperature (°C)", "Agent")
         await self.logger.get_setting("agent_max_temp", "23.0", "Maximum allowed thermostat temperature (°C)", "Agent")
         await self.logger.get_setting("check_interval_minutes", "30", "How often the agent runs (minutes)", "Agent")
+        await self.logger.get_setting("ollama_timeout", "120", "LLM request timeout in seconds", "Agent")
 
         # Baseline Automation Settings (ensured by BaselineAutomation.get_settings)
         await self.baseline.get_settings()
@@ -306,6 +307,8 @@ REMINDER: Always respond in English. Do not use Chinese or any other language.""
         # Get Agent Settings
         min_temp = float(await self.logger.get_setting("agent_min_temp", "17.0"))
         max_temp = float(await self.logger.get_setting("agent_max_temp", "23.0"))
+        ollama_timeout = float(await self.logger.get_setting("ollama_timeout", "120"))
+        self.ollama.timeout = ollama_timeout  # Update timeout from settings
 
         # Define tools for LLM, including dynamic temperature range
         tools = [

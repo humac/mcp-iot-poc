@@ -7,23 +7,29 @@ Handles LLM inference with tool calling via Ollama API.
 import os
 import json
 import logging
-from typing import Any
+from typing import Any, Callable, Optional
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://10.0.30.3:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
-OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
+OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://10.0.30.3:11434")
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+OLLAMA_TIMEOUT: float = float(os.getenv("OLLAMA_TIMEOUT", "120"))
 
 
 class OllamaClient:
     """Client for Ollama LLM inference with tool calling."""
     
-    def __init__(self, base_url: str = None, model: str = None):
-        self.base_url = (base_url or OLLAMA_URL).rstrip("/")
-        self.model = model or OLLAMA_MODEL
+    def __init__(
+        self, 
+        base_url: Optional[str] = None, 
+        model: Optional[str] = None,
+        timeout: Optional[float] = None,
+    ) -> None:
+        self.base_url: str = (base_url or OLLAMA_URL).rstrip("/")
+        self.model: str = model or OLLAMA_MODEL
+        self.timeout: float = timeout if timeout is not None else OLLAMA_TIMEOUT
     
     async def health_check(self) -> bool:
         """Check if Ollama is available."""
@@ -64,7 +70,7 @@ class OllamaClient:
                 response = await client.post(
                     f"{self.base_url}/api/chat",
                     json=payload,
-                    timeout=OLLAMA_TIMEOUT,  # Configurable LLM timeout
+                    timeout=self.timeout,  # Configurable LLM timeout
                 )
                 if response.status_code != 200:
                     logger.error(f"Ollama error response: {response.text}")

@@ -98,7 +98,7 @@ These are low-effort, high-impact fixes that prevent crashes and leaks during de
 - [x] #15 - Docker resource limits
 - [x] #17 - Extract magic numbers to config
 - [x] #18 - Structured logging
-- [ ] #16 - Type hints (Deferred)
+- [x] #16 - Type hints
 
 ### Phase 5
 - [x] #19 - Unit tests

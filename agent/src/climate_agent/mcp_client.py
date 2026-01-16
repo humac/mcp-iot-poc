@@ -6,7 +6,7 @@ Connects to MCP servers via HTTP+SSE transport and executes tool calls.
 
 import json
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 class MCPClient:
     """Client for communicating with MCP servers over HTTP."""
     
-    def __init__(self, server_url: str, server_name: str = "mcp-server"):
-        self.server_url = server_url.rstrip("/")
-        self.server_name = server_name
-        self.tools: list[dict] = []
+    def __init__(self, server_url: str, server_name: str = "mcp-server") -> None:
+        self.server_url: str = server_url.rstrip("/")
+        self.server_name: str = server_name
+        self.tools: list[dict[str, Any]] = []
     
     @retry(
         stop=stop_after_attempt(3),
@@ -65,7 +65,7 @@ class MCPClient:
             logger.exception(f"Failed to initialize {self.server_name}")
             return False
     
-    async def call_tool(self, name: str, arguments: dict[str, Any] = None) -> dict[str, Any]:
+    async def call_tool(self, name: str, arguments: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """Call a tool on the MCP server."""
         if arguments is None:
             arguments = {}
