@@ -218,7 +218,7 @@ async def on_shutdown():
 
 ### 15. No Resource Limits in Docker
 **File:** `docker-compose.yml`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 No CPU or memory limits specified.
 
@@ -250,7 +250,7 @@ Many functions lack complete type hints.
 
 ### 17. Magic Numbers and Hardcoded Constants
 **File:** `agent/src/climate_agent/ollama_client.py:65`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 ```python
 timeout=120.0,  # Why 120? Not configurable

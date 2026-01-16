@@ -22,47 +22,60 @@ class DecisionLogger:
     
     def __init__(self, db_path: str = None):
         self.db_path = db_path or DB_PATH
+        self._connection: Optional[aiosqlite.Connection] = None
+    
+    async def _get_connection(self) -> aiosqlite.Connection:
+        """Get or create persistent database connection."""
+        if self._connection is None:
+            self._connection = await aiosqlite.connect(self.db_path)
+        return self._connection
+    
+    async def close(self):
+        """Close the database connection."""
+        if self._connection:
+            await self._connection.close()
+            self._connection = None
     
     async def initialize(self):
         """Create database tables if they don't exist."""
-        async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS decisions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT NOT NULL,
-                    weather_data TEXT,
-                    thermostat_state TEXT,
-                    action TEXT NOT NULL,
-                    ai_temperature REAL,
-                    reasoning TEXT,
-                    tool_calls TEXT,
-                    baseline_action TEXT,
-                    baseline_temperature REAL,
-                    baseline_rule TEXT,
-                    baseline_reasoning TEXT,
-                    decisions_match INTEGER,
-                    success INTEGER DEFAULT 1
-                )
-            """)
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS prompts (
-                    key TEXT PRIMARY KEY,
-                    content TEXT NOT NULL,
-                    description TEXT,
-                    updated_at TEXT
-                )
-            """)
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL,
-                    description TEXT,
-                    category TEXT,
-                    updated_at TEXT
-                )
-            """)
-            await db.commit()
-            logger.info(f"Database initialized at {self.db_path}")
+        db = await self._get_connection()
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS decisions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                weather_data TEXT,
+                thermostat_state TEXT,
+                action TEXT NOT NULL,
+                ai_temperature REAL,
+                reasoning TEXT,
+                tool_calls TEXT,
+                baseline_action TEXT,
+                baseline_temperature REAL,
+                baseline_rule TEXT,
+                baseline_reasoning TEXT,
+                decisions_match INTEGER,
+                success INTEGER DEFAULT 1
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS prompts (
+                key TEXT PRIMARY KEY,
+                content TEXT NOT NULL,
+                description TEXT,
+                updated_at TEXT
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                description TEXT,
+                category TEXT,
+                updated_at TEXT
+            )
+        """)
+        await db.commit()
+        logger.info(f"Database initialized at {self.db_path}")
     
     async def log_decision(
         self,

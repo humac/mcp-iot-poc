@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://10.0.30.3:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
 
 
 class OllamaClient:
@@ -63,7 +64,7 @@ class OllamaClient:
                 response = await client.post(
                     f"{self.base_url}/api/chat",
                     json=payload,
-                    timeout=120.0,  # LLM can be slow
+                    timeout=OLLAMA_TIMEOUT,  # Configurable LLM timeout
                 )
                 if response.status_code != 200:
                     logger.error(f"Ollama error response: {response.text}")

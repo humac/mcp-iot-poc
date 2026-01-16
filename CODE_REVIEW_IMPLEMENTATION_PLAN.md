@@ -94,11 +94,11 @@ These are low-effort, high-impact fixes that prevent crashes and leaks during de
 - [x] #20 - Require weather coordinates
 
 ### Phase 4
-- [ ] #12 - Database connection pooling
-- [ ] #15 - Docker resource limits
-- [ ] #17 - Extract magic numbers
-- [ ] #18 - Structured logging
-- [ ] #16 - Type hints
+- [ ] #12 - Database connection pooling (Deferred - SQLite local connections are lightweight)
+- [x] #15 - Docker resource limits
+- [x] #17 - Extract magic numbers to config
+- [ ] #18 - Structured logging (Deferred to Phase 5)
+- [ ] #16 - Type hints (Deferred to Phase 5)
 
 ### Phase 5
 - [ ] #19 - Unit tests
