@@ -56,6 +56,8 @@ services:
       - LATITUDE=${LATITUDE:-45.35}
       - LONGITUDE=${LONGITUDE:-75.75}
       - TIMEZONE=${TIMEZONE:-America/Toronto}
+      - DASHBOARD_USER=${DASHBOARD_USER:-}
+      - DASHBOARD_PASS=${DASHBOARD_PASS:-}
     volumes:
       - agent-data:/app/data
     depends_on:

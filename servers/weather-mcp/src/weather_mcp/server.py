@@ -25,9 +25,18 @@ import uvicorn
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration from environment
-LATITUDE = float(os.getenv("LATITUDE", "45.35"))
-LONGITUDE = float(os.getenv("LONGITUDE", "-75.75"))
+# Configuration from environment - REQUIRED
+LATITUDE_STR = os.getenv("LATITUDE")
+LONGITUDE_STR = os.getenv("LONGITUDE")
+
+if not LATITUDE_STR or not LONGITUDE_STR:
+    raise ValueError(
+        "LATITUDE and LONGITUDE environment variables are required. "
+        "Example: LATITUDE=45.35 LONGITUDE=-75.75"
+    )
+
+LATITUDE = float(LATITUDE_STR)
+LONGITUDE = float(LONGITUDE_STR)
 TIMEZONE = os.getenv("TIMEZONE", "America/Toronto")
 
 # Open-Meteo API base URL

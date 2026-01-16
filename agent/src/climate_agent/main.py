@@ -8,11 +8,13 @@ Includes baseline automation comparison to demonstrate AI vs rule-based decision
 import os
 import asyncio
 import logging
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .mcp_client import MCPClient
@@ -33,6 +35,40 @@ HA_MCP_URL = os.getenv("HA_MCP_URL", "http://homeassistant-mcp:8080")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL_MINUTES", "30"))
 MIN_TEMP = float(os.getenv("MIN_TEMP", "17"))
 MAX_TEMP = float(os.getenv("MAX_TEMP", "23"))
+
+# Dashboard authentication (optional)
+DASHBOARD_USER = os.getenv("DASHBOARD_USER", "")
+DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "")
+
+security = HTTPBasic(auto_error=False)
+
+
+def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    """Verify HTTP Basic Auth credentials for dashboard access."""
+    # If auth not configured, allow access
+    if not DASHBOARD_USER or not DASHBOARD_PASS:
+        return None
+    
+    # If no credentials provided, require them
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    
+    # Verify credentials using constant-time comparison
+    correct_user = secrets.compare_digest(credentials.username.encode("utf8"), DASHBOARD_USER.encode("utf8"))
+    correct_pass = secrets.compare_digest(credentials.password.encode("utf8"), DASHBOARD_PASS.encode("utf8"))
+    
+    if not (correct_user and correct_pass):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    
+    return credentials.username
 
 
 class BaselineAutomation:
@@ -573,7 +609,9 @@ def main():
 
     # Create FastAPI app with lifespan
     app = FastAPI(title="Climate Agent Dashboard", lifespan=lifespan)
-    app.include_router(dashboard_router)
+    
+    # Apply authentication to dashboard routes
+    app.include_router(dashboard_router, dependencies=[Depends(verify_credentials)])
 
     # Run the web server
     uvicorn.run(app, host="0.0.0.0", port=8080)

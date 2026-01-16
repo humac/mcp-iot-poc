@@ -150,7 +150,7 @@ Temperature is set but no confirmation that HA actually applied the change.
 
 ### 10. Unprotected Web Dashboard
 **File:** `agent/src/climate_agent/web_dashboard.py`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 Dashboard is completely unprotected - anyone on network can see thermostat data.
 
@@ -285,7 +285,7 @@ No test files present in the project.
 
 ### 20. Hardcoded Coordinates Default Silently
 **File:** `servers/weather-mcp/src/weather_mcp/server.py:28-29`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 Default coordinates are hardcoded; if not configured, silently uses defaults.
 

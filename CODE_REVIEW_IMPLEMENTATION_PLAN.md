@@ -90,8 +90,8 @@ These are low-effort, high-impact fixes that prevent crashes and leaks during de
 - [x] #9 - Verify temperature changes
 
 ### Phase 3
-- [ ] #10 - Dashboard authentication
-- [ ] #20 - Require weather coordinates
+- [x] #10 - Dashboard authentication
+- [x] #20 - Require weather coordinates
 
 ### Phase 4
 - [ ] #12 - Database connection pooling
