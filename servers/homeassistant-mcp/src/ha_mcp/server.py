@@ -7,10 +7,12 @@ Uses HTTP+SSE transport for Docker deployment.
 
 import os
 import json
+import asyncio
 import logging
 from typing import Any
 
 import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from mcp.server import Server
 from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
@@ -28,8 +30,9 @@ HA_URL = os.getenv("HA_URL", "http://10.0.20.5:8123")
 HA_TOKEN = os.getenv("HA_TOKEN", "")
 HA_ENTITY_ID = os.getenv("HA_ENTITY_ID", "climate.my_ecobee")
 
+# #2: Fail fast if HA_TOKEN is missing
 if not HA_TOKEN:
-    logger.warning("HA_TOKEN not set - API calls will fail")
+    raise ValueError("HA_TOKEN environment variable is required")
 
 # Create MCP server instance
 mcp_server = Server("homeassistant-mcp")
@@ -64,6 +67,12 @@ def sanitize_log_data(data: Any) -> Any:
     return data
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, max=10),
+    retry=retry_if_exception_type(httpx.RequestError),
+    reraise=True,
+)
 async def get_entity_state() -> dict[str, Any]:
     """Get current state of the climate entity."""
     url = f"{HA_URL}/api/states/{HA_ENTITY_ID}"
@@ -74,6 +83,12 @@ async def get_entity_state() -> dict[str, Any]:
         return response.json()
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, max=10),
+    retry=retry_if_exception_type(httpx.RequestError),
+    reraise=True,
+)
 async def call_ha_service(domain: str, service: str, data: dict[str, Any]) -> dict[str, Any]:
     """Call a Home Assistant service."""
     url = f"{HA_URL}/api/services/{domain}/{service}"
@@ -193,14 +208,25 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 "temperature": temperature,
             })
             
+            # #9: Verify temperature was applied
+            await asyncio.sleep(1)  # Brief delay for HA to process
+            state = await get_entity_state()
+            actual_temp = state.get("attributes", {}).get("temperature")
+            verified = actual_temp == temperature
+            
+            if not verified:
+                logger.warning(f"Temperature verification: set {temperature}, got {actual_temp}")
+            
             result = {
                 "success": True,
                 "action": "set_temperature",
                 "target_temperature": temperature,
+                "actual_temperature": actual_temp,
+                "verified": verified,
                 "entity_id": HA_ENTITY_ID,
             }
             
-            logger.info(f"Temperature set to {temperature}°C")
+            logger.info(f"Temperature set to {temperature}°C (verified: {verified})")
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         
         elif name == "set_hvac_mode":
@@ -246,11 +272,15 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
     
+    # #7: Handle connection errors before HTTP status errors
+    except httpx.RequestError as e:
+        logger.exception("Connection error to Home Assistant")
+        return [TextContent(type="text", text=f"Connection error: {str(e)}")]
     except httpx.HTTPStatusError as e:
         logger.error(f"HA API error: {e.response.status_code} - {e.response.text}")
         return [TextContent(type="text", text=f"Home Assistant API error: {e.response.status_code}")]
     except Exception as e:
-        logger.error(f"Error in tool {name}: {e}")
+        logger.exception(f"Error in tool {name}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
 

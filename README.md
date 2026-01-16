@@ -104,7 +104,7 @@ HA_ENTITY_ID=climate.my_ecobee
 
 # Ollama
 OLLAMA_URL=http://10.0.30.3:11434
-OLLAMA_MODEL=llama3.1:8b
+OLLAMA_MODEL=ministral-3:14b
 
 # Agent Settings
 CHECK_INTERVAL_MINUTES=30

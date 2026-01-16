@@ -516,6 +516,20 @@ async def startup():
     await agent.run_evaluation()
 
 
+# Track active evaluation for graceful shutdown
+_active_evaluation: asyncio.Task | None = None
+
+
+async def scheduled_evaluation_wrapper():
+    """Wrapper for scheduled evaluation with tracking."""
+    global _active_evaluation
+    _active_evaluation = asyncio.current_task()
+    try:
+        await agent.run_evaluation()
+    finally:
+        _active_evaluation = None
+
+
 def main():
     """Main entry point."""
     logger.info("Starting Climate Agent")
@@ -526,7 +540,7 @@ def main():
     # Create scheduler
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
-        scheduled_evaluation,
+        scheduled_evaluation_wrapper,
         "interval",
         minutes=CHECK_INTERVAL,
         id="climate_evaluation",
@@ -540,8 +554,22 @@ def main():
         scheduler.start()
         asyncio.create_task(startup())
         yield
-        # Shutdown
-        scheduler.shutdown()
+        # #14: Graceful shutdown
+        logger.info("Initiating graceful shutdown...")
+        
+        # Wait for active evaluation to complete (with timeout)
+        if _active_evaluation and not _active_evaluation.done():
+            logger.info("Waiting for active evaluation to complete...")
+            try:
+                await asyncio.wait_for(asyncio.shield(_active_evaluation), timeout=30.0)
+                logger.info("Active evaluation completed")
+            except asyncio.TimeoutError:
+                logger.warning("Evaluation timed out during shutdown, cancelling...")
+                _active_evaluation.cancel()
+        
+        # Shutdown scheduler gracefully
+        scheduler.shutdown(wait=True)
+        logger.info("Shutdown complete")
 
     # Create FastAPI app with lifespan
     app = FastAPI(title="Climate Agent Dashboard", lifespan=lifespan)

@@ -29,7 +29,7 @@ logger.info(f"MCP request: {body}")  # Could contain sensitive data
 
 ### 2. Missing HA_TOKEN Validation at Startup
 **File:** `servers/homeassistant-mcp/src/ha_mcp/server.py:29-30`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 Missing token only produces a warning, container starts anyway:
 ```python
@@ -96,7 +96,7 @@ If tools are called multiple times, only the LAST result is retained.
 
 ### 6. Missing Retry Logic for Transient Failures
 **Files:** Multiple
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 No retry logic for network errors or transient API failures.
 
@@ -112,7 +112,7 @@ async def fetch_with_retry(...):
 
 ### 7. Incomplete HTTP Error Handling
 **File:** `servers/homeassistant-mcp/src/ha_mcp/server.py:228-233`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 Only catches `HTTPStatusError`, not connection errors.
 
@@ -128,7 +128,7 @@ except httpx.HTTPStatusError as e:
 
 ### 8. JSON Parsing Errors Silently Ignored
 **File:** `agent/src/climate_agent/mcp_client.py:79-83`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 JSONDecodeError silently falls back to text, causing downstream issues.
 
@@ -138,7 +138,7 @@ JSONDecodeError silently falls back to text, causing downstream issues.
 
 ### 9. No Verification After Setting Temperature
 **File:** `servers/homeassistant-mcp/src/ha_mcp/server.py:155-173`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 Temperature is set but no confirmation that HA actually applied the change.
 
@@ -202,7 +202,7 @@ Baseline automation rules are hardcoded in Python.
 
 ### 14. No Graceful Shutdown
 **File:** `agent/src/climate_agent/main.py:357-359`
-**Status:** [ ] Not Fixed
+**Status:** [x] Fixed
 
 Doesn't wait for in-flight requests or scheduled jobs to complete.
 

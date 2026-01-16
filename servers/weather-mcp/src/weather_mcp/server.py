@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any
 
 import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from mcp.server import Server
 from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
@@ -36,6 +37,12 @@ OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 mcp_server = Server("weather-mcp")
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, max=10),
+    retry=retry_if_exception_type(httpx.RequestError),
+    reraise=True,
+)
 async def fetch_weather(hours: int = 24) -> dict[str, Any]:
     """Fetch weather data from Open-Meteo API."""
     params = {
@@ -203,8 +210,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
     
+    # #7: Handle connection errors before generic exceptions
+    except httpx.RequestError as e:
+        logger.exception(f"Connection error in tool {name}")
+        return [TextContent(type="text", text=f"Connection error: {str(e)}")]
     except Exception as e:
-        logger.error(f"Error in tool {name}: {e}")
+        logger.exception(f"Error in tool {name}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
 

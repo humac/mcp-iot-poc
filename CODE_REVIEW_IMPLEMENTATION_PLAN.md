@@ -82,12 +82,12 @@ These are low-effort, high-impact fixes that prevent crashes and leaks during de
 - [ ] #11 - Configurable debug mode
 
 ### Phase 2
-- [ ] #2 - Validate HA_TOKEN at startup
-- [ ] #6 - Add retry logic with backoff
-- [ ] #7 - Handle connection errors
-- [ ] #8 - Handle JSON parse errors
-- [ ] #14 - Graceful shutdown
-- [ ] #9 - Verify temperature changes
+- [x] #2 - Validate HA_TOKEN at startup
+- [x] #6 - Add retry logic with backoff
+- [x] #7 - Handle connection errors
+- [x] #8 - Handle JSON parse errors
+- [x] #14 - Graceful shutdown
+- [x] #9 - Verify temperature changes
 
 ### Phase 3
 - [ ] #10 - Dashboard authentication

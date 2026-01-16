@@ -4,10 +4,12 @@ MCP Client
 Connects to MCP servers via HTTP+SSE transport and executes tool calls.
 """
 
+import json
 import logging
 from typing import Any
 
 import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
@@ -20,34 +22,47 @@ class MCPClient:
         self.server_name = server_name
         self.tools: list[dict] = []
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, max=10),
+        retry=retry_if_exception_type(httpx.RequestError),
+        reraise=True,
+    )
+    async def _make_request(self, payload: dict, timeout: float = 30.0) -> dict:
+        """Make HTTP request with retry logic."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.server_url}/mcp",
+                json=payload,
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            return response.json()
+    
     async def initialize(self) -> bool:
         """Initialize connection and fetch available tools."""
         try:
-            async with httpx.AsyncClient() as client:
-                # Initialize
-                response = await client.post(
-                    f"{self.server_url}/mcp",
-                    json={"jsonrpc": "2.0", "method": "initialize", "id": 1},
-                    timeout=10.0,
-                )
-                response.raise_for_status()
-                init_result = response.json()
-                logger.info(f"Initialized {self.server_name}: {init_result}")
-                
-                # List tools
-                response = await client.post(
-                    f"{self.server_url}/mcp",
-                    json={"jsonrpc": "2.0", "method": "tools/list", "id": 2},
-                    timeout=10.0,
-                )
-                response.raise_for_status()
-                tools_result = response.json()
-                self.tools = tools_result.get("result", {}).get("tools", [])
-                logger.info(f"Loaded {len(self.tools)} tools from {self.server_name}")
-                
-                return True
+            # Initialize
+            init_result = await self._make_request(
+                {"jsonrpc": "2.0", "method": "initialize", "id": 1},
+                timeout=10.0
+            )
+            logger.info(f"Initialized {self.server_name}: {init_result}")
+            
+            # List tools
+            tools_result = await self._make_request(
+                {"jsonrpc": "2.0", "method": "tools/list", "id": 2},
+                timeout=10.0
+            )
+            self.tools = tools_result.get("result", {}).get("tools", [])
+            logger.info(f"Loaded {len(self.tools)} tools from {self.server_name}")
+            
+            return True
+        except httpx.RequestError as e:
+            logger.exception(f"Connection error initializing {self.server_name}")
+            return False
         except Exception as e:
-            logger.error(f"Failed to initialize {self.server_name}: {e}")
+            logger.exception(f"Failed to initialize {self.server_name}")
             return False
     
     async def call_tool(self, name: str, arguments: dict[str, Any] = None) -> dict[str, Any]:
@@ -56,36 +71,38 @@ class MCPClient:
             arguments = {}
         
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.server_url}/mcp",
-                    json={
-                        "jsonrpc": "2.0",
-                        "method": "tools/call",
-                        "params": {"name": name, "arguments": arguments},
-                        "id": 1,
-                    },
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                result = response.json()
-                
-                if "error" in result:
-                    logger.error(f"Tool error: {result['error']}")
-                    return {"error": result["error"]["message"]}
-                
-                content = result.get("result", {}).get("content", [])
-                if content and content[0].get("type") == "text":
-                    import json
-                    try:
-                        return json.loads(content[0]["text"])
-                    except json.JSONDecodeError:
-                        return {"text": content[0]["text"]}
-                
-                return {"content": content}
+            result = await self._make_request({
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+                "id": 1,
+            })
+            
+            if "error" in result:
+                logger.error(f"Tool error: {result['error']}")
+                return {"error": result["error"]["message"]}
+            
+            content = result.get("result", {}).get("content", [])
+            if content and content[0].get("type") == "text":
+                try:
+                    return json.loads(content[0]["text"])
+                except json.JSONDecodeError as e:
+                    # #8: Handle JSON parse errors properly
+                    raw_text = content[0]["text"]
+                    logger.warning(f"Failed to parse JSON response from {name}: {raw_text[:100]}")
+                    return {
+                        "error": "Invalid JSON response",
+                        "raw_text": raw_text,
+                        "parse_error": str(e),
+                    }
+            
+            return {"content": content}
         
+        except httpx.RequestError as e:
+            logger.exception(f"Connection error calling tool {name}")
+            return {"error": f"Connection error: {str(e)}"}
         except Exception as e:
-            logger.error(f"Failed to call tool {name}: {e}")
+            logger.exception(f"Failed to call tool {name}")
             return {"error": str(e)}
     
     async def health_check(self) -> bool:
