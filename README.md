@@ -113,9 +113,12 @@ MAX_TEMP=23
 OLLAMA_TIMEOUT=120
 LOG_FORMAT=text
 
-# Dashboard Auth (Optional)
+# Dashboard Auth (Optional - enables login page)
 DASHBOARD_USER=admin
 DASHBOARD_PASS=secret
+
+# MCP Server Authentication (Optional - secures inter-service communication)
+# MCP_AUTH_TOKEN=your_secret_token
 
 # Location (for weather)
 LATITUDE=45.35
@@ -192,8 +195,13 @@ mcp-iot-poc/
 ├── config/
 │   └── system_prompt.md        # Agent's instructions
 │
-└── presentation/               # Slides and diagrams
-    └── diagrams/
+├── docs/
+│   ├── AUTH0_PLAN.md           # Future Auth0 integration plan
+│   ├── CODE_REVIEW.md          # Code review notes
+│   └── mcp-iot-lunch-learn-plan.md
+│
+└── presentation/
+    └── LUNCH_AND_LEARN.md      # Slide-by-slide presentation
 ```
 
 ## 🔧 MCP Server Details
@@ -269,12 +277,20 @@ curl -X POST http://localhost:8081/mcp \
 
 ### Dashboard & UI
 - `GET /` - Web dashboard
+- `GET /login` - Login page (if auth enabled)
+- `GET /logout` - Logout and clear session
+- `GET /prompts` - Prompt configuration page
+- `GET /settings` - Agent settings page
+- `GET /chat` - Chat with agent
 
 ### API
 - `GET /health` - Health check
 - `GET /api/decisions` - Recent decisions (JSON)
 - `GET /api/stats` - Decision statistics
 - `GET /api/comparison` - AI vs baseline comparison stats
+- `GET /api/status` - Service health status
+- `GET /api/security/stats` - Security event statistics
+- `POST /api/security/test-injection` - Run security boundary tests
 
 ## 🧪 Testing & Quality
 
@@ -296,9 +312,12 @@ pytest tests/ -v --cov=src --cov-report=term-missing
 ## 🏭 Production Readiness
 
 ### 🛡️ Security
-- **OAuth2**: All internal service communication is authenticated.
-- **Basic Auth**: Dashboard can be protected with `DASHBOARD_USER`/`PASS`.
-- **Input Validation**: LLM tool calls are rigorously validated.
+- **MCP Authentication**: Optional bearer token auth between agent and MCP servers (`MCP_AUTH_TOKEN`).
+- **Login Page**: Dashboard protected with session-based login (set `DASHBOARD_USER`/`PASS`).
+- **Tool Safety Bounds**: Temperature limited to MIN_TEMP - MAX_TEMP (prevents hallucinated extremes).
+- **Input Validation**: All LLM tool calls rigorously validated.
+- **Security Dashboard**: View blocked actions, auth failures, and run injection tests.
+- **Audit Logging**: Every decision and tool call logged to SQLite.
 
 ### 📊 Observability
 - **Structured Logging**: Set `LOG_FORMAT=json` for machine-readable logs.
@@ -476,6 +495,18 @@ Observable behaviors to point out:
 ## 📄 License
 
 MIT License - See LICENSE file for details.
+
+## 🎤 Presentation
+
+A complete lunch & learn presentation is available at [`presentation/LUNCH_AND_LEARN.md`](presentation/LUNCH_AND_LEARN.md).
+
+**Topics covered:**
+- What are AI Agents? (Chatbots vs Agents)
+- What is MCP? (Protocol overview)
+- Architecture deep dive (with diagrams)
+- Security considerations (4 layers of protection)
+- Gotchas & lessons learned
+- Live demo script
 
 ---
 
