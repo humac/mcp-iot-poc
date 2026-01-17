@@ -1,6 +1,6 @@
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -21,8 +21,10 @@ async def test_api_status_success():
     with patch("src.climate_agent.main.agent") as mock_agent:
         mock_agent.initialized = True
         
-        # Mock health checks
-        mock_agent.ollama.health_check = AsyncMock(return_value=True)
+        # Mock LLM provider
+        mock_agent.llm.provider_name = "ollama"
+        mock_agent.llm.model = "llama3.1:8b"
+        mock_agent.llm.health_check = AsyncMock(return_value=True)
         mock_agent.weather_client.health_check = AsyncMock(return_value=True)
         mock_agent.ha_client.health_check = AsyncMock(return_value=True)
         
@@ -32,7 +34,8 @@ async def test_api_status_success():
         # Verify response
         assert response.status_code == 200
         data = response.json()
-        assert data["ollama"] is True
+        assert data["llm"] is True
+        assert data["llm_provider"] == "ollama"
         assert data["weather"] is True
         assert data["ha"] is True
 
@@ -44,8 +47,10 @@ async def test_api_status_partial_failure():
     with patch("src.climate_agent.main.agent") as mock_agent:
         mock_agent.initialized = True
         
-        # Mock health checks (Ollama fails)
-        mock_agent.ollama.health_check = AsyncMock(return_value=False)
+        # Mock LLM provider (fails)
+        mock_agent.llm.provider_name = "openai"
+        mock_agent.llm.model = "gpt-4o"
+        mock_agent.llm.health_check = AsyncMock(return_value=False)
         mock_agent.weather_client.health_check = AsyncMock(return_value=True)
         mock_agent.ha_client.health_check = AsyncMock(return_value=True)
         
@@ -55,7 +60,8 @@ async def test_api_status_partial_failure():
         # Verify response
         assert response.status_code == 200
         data = response.json()
-        assert data["ollama"] is False
+        assert data["llm"] is False
+        assert data["llm_provider"] == "openai"
         assert data["weather"] is True
         assert data["ha"] is True
 
@@ -73,6 +79,7 @@ async def test_api_status_not_initialized():
         # Verify response
         assert response.status_code == 200
         data = response.json()
-        assert data["ollama"] is False
+        assert data["llm"] is False
+        assert data["llm_provider"] == "unknown"
         assert data["weather"] is False
         assert data["ha"] is False

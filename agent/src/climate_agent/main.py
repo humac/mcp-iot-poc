@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .mcp_client import MCPClient
-from .ollama_client import OllamaClient
+from .llm_factory import create_llm_provider
 from .decision_logger import DecisionLogger
 from .web_dashboard import router as dashboard_router
 
@@ -148,9 +148,9 @@ class ClimateAgent:
     def __init__(self):
         self.weather_client = MCPClient(WEATHER_MCP_URL, "weather-mcp")
         self.ha_client = MCPClient(HA_MCP_URL, "homeassistant-mcp")
-        self.ollama = OllamaClient()
+        self.llm = create_llm_provider()  # Use factory for LLM provider
         self.logger = DecisionLogger()
-        self.baseline = BaselineAutomation(self.logger) # Pass logger to BaselineAutomation
+        self.baseline = BaselineAutomation(self.logger)  # Pass logger to BaselineAutomation
         self.initialized = False
     
     async def initialize(self):
@@ -160,11 +160,11 @@ class ClimateAgent:
         # Initialize database
         await self.logger.initialize()
         
-        # Check Ollama
-        if not await self.ollama.health_check():
-            logger.error("Ollama is not available!")
+        # Check LLM provider
+        if not await self.llm.health_check():
+            logger.error(f"LLM provider ({self.llm.provider_name}) is not available!")
             return False
-        logger.info("Ollama is available")
+        logger.info(f"LLM provider ({self.llm.provider_name}/{self.llm.model}) is available")
         
         # Initialize MCP clients
         if not await self.weather_client.initialize():
@@ -247,7 +247,9 @@ REMINDER: Always respond in English. Do not use Chinese or any other language.""
         await self.logger.get_setting("agent_min_temp", "17.0", "Minimum allowed thermostat temperature (°C)", "Agent")
         await self.logger.get_setting("agent_max_temp", "23.0", "Maximum allowed thermostat temperature (°C)", "Agent")
         await self.logger.get_setting("check_interval_minutes", "30", "How often the agent runs (minutes)", "Agent")
-        await self.logger.get_setting("ollama_timeout", "120", "LLM request timeout in seconds", "Agent")
+        await self.logger.get_setting("llm_timeout", "120", "LLM request timeout in seconds", "LLM")
+        await self.logger.get_setting("llm_provider", "ollama", "LLM provider (ollama, openai, anthropic, google)", "LLM")
+        await self.logger.get_setting("llm_model", "", "LLM model name (empty = default for provider)", "LLM")
 
         # Baseline Automation Settings (ensured by BaselineAutomation.get_settings)
         await self.baseline.get_settings()
@@ -277,8 +279,11 @@ REMINDER: Always respond in English. Do not use Chinese or any other language.""
         # Get Agent Settings
         min_temp = float(await self.logger.get_setting("agent_min_temp", "17.0"))
         max_temp = float(await self.logger.get_setting("agent_max_temp", "23.0"))
-        ollama_timeout = float(await self.logger.get_setting("ollama_timeout", "120"))
-        self.ollama.timeout = ollama_timeout  # Update timeout from settings
+        
+        # Reload LLM provider from settings (allows runtime switching)
+        settings = await self.logger.get_all_settings()
+        settings_dict = {s["key"]: s["value"] for s in settings}
+        self.llm = create_llm_provider(settings=settings_dict)
 
         # Define tools for LLM, including dynamic temperature range
         tools = [
@@ -410,7 +415,7 @@ REMINDER: Always respond in English. Do not use Chinese or any other language.""
         )
         
         try:
-            result = await self.ollama.chat_with_tools(
+            result = await self.llm.chat_with_tools(
                 user_message=user_message_template,
                 tools=all_tools,
                 tool_executor=self.execute_tool,

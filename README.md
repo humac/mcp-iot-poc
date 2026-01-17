@@ -17,9 +17,9 @@ This project compares AI-driven decision making against traditional rule-based H
 │  Docker Environment                                                 │
 │                                                                     │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────────┐  │
-│  │ Ollama      │  │ Weather MCP │  │ HA MCP      │  │ Agent      │  │
-│  │             │◄─┤ Server      │◄─┤ Server      │◄─┤ Loop       │  │
-│  │ llama3.1:8b │  │ :8081       │  │ :8082       │  │ :8080      │  │
+│  │ LLM Provider│  │ Weather MCP │  │ HA MCP      │  │ Agent      │  │
+│  │ (Ollama/    │◄─┤ Server      │◄─┤ Server      │◄─┤ Loop       │  │
+│  │ OpenAI/etc) │  │ :8081       │  │ :8082       │  │ :8080      │  │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └────────────┘  │
 │                          │                 │                        │
 └──────────────────────────┼─────────────────┼────────────────────────┘
@@ -35,7 +35,7 @@ This project compares AI-driven decision making against traditional rule-based H
 | `weather-mcp` | 8081 | MCP server wrapping Open-Meteo weather API |
 | `homeassistant-mcp` | 8082 | MCP server for Home Assistant climate control |
 | `agent` | 8080 | Autonomous agent with web dashboard |
-| `ollama` | 11434 | Local LLM inference (external) |
+| LLM Provider | varies | Ollama (local), OpenAI, Anthropic, or Google Gemini |
 
 ## 🔑 Key Features
 
@@ -73,10 +73,36 @@ Both MCP servers implement the standard protocol with HTTP+SSE transport:
 - `GET /sse` - Server-Sent Events for streaming
 - `GET /health` - Health check endpoint
 
+### Multi-LLM Support
+
+Switch between different LLM providers at runtime:
+
+| Provider | Package | Default Model | Features |
+|----------|---------|---------------|----------|
+| **Ollama** (default) | Built-in | `llama3.1:8b` | Local, free, privacy |
+| **OpenAI** | `pip install openai` | `gpt-4o` | Best reasoning |
+| **Anthropic** | `pip install anthropic` | `claude-3-5-sonnet` | Great tool use |
+| **Google** | `pip install google-generativeai` | `gemini-2.0-flash` | Fast, multimodal |
+
+**Configuration:**
+- Set `LLM_PROVIDER` and API keys in `.env` or dashboard Settings
+- Switch providers in the Chat page dropdown to compare reasoning
+- Agent reloads provider each evaluation cycle
+
+**Install cloud providers:**
+```bash
+cd agent
+pip install -e ".[all-llm]"  # Install all providers
+# Or individually:
+pip install -e ".[openai]"
+pip install -e ".[anthropic]"
+pip install -e ".[google]"
+```
+
 ## 📋 Prerequisites
 
 - **Docker** and **docker-compose**
-- **Ollama** with `llama3.1:8b` model pulled
+- **Ollama** with a model pulled (for local LLM), OR API keys for cloud providers
 - **Home Assistant** with a climate entity (thermostat)
 - Network connectivity between containers and HA
 
@@ -116,6 +142,15 @@ LOG_FORMAT=text
 # Dashboard Auth (Optional - enables login page)
 DASHBOARD_USER=admin
 DASHBOARD_PASS=secret
+
+# LLM Provider Configuration
+LLM_PROVIDER=ollama          # Options: ollama, openai, anthropic, google
+# LLM_MODEL=                  # Leave empty for default
+
+# Cloud LLM API Keys (optional)
+# OPENAI_API_KEY=sk-...
+# ANTHROPIC_API_KEY=sk-ant-...
+# GOOGLE_API_KEY=...
 
 # MCP Server Authentication (Optional - secures inter-service communication)
 # MCP_AUTH_TOKEN=your_secret_token
@@ -187,7 +222,13 @@ mcp-iot-poc/
 │       ├── __init__.py
 │       ├── main.py             # Agent loop & scheduler
 │       ├── mcp_client.py       # MCP protocol client
-│       ├── ollama_client.py    # LLM integration
+│       ├── llm_provider.py     # Abstract LLM interface
+│       ├── llm_factory.py      # Provider factory
+│       ├── providers/          # LLM provider implementations
+│       │   ├── ollama.py       # Ollama (local)
+│       │   ├── openai.py       # OpenAI/ChatGPT
+│       │   ├── anthropic.py    # Anthropic/Claude
+│       │   └── google.py       # Google Gemini
 │       ├── decision_logger.py  # SQLite logging
 │       ├── web_dashboard.py    # FastAPI dashboard
 │       └── tests/              # Unit tests

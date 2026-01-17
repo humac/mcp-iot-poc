@@ -13,6 +13,7 @@ from fastapi import APIRouter, Request, Form, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .decision_logger import DecisionLogger
+from .llm_factory import create_llm_provider, get_available_providers
 
 router = APIRouter()
 
@@ -589,10 +590,19 @@ CHAT_PAGE_HTML = """
     <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full overflow-hidden">
         <!-- Header -->
         <div class="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-4">
-            <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center">
                 <div class="flex items-center gap-2 min-w-0">
                     <i data-lucide="message-circle" class="w-5 h-5 sm:w-6 sm:h-6 text-gray-800 dark:text-gray-100 flex-shrink-0"></i>
                     <h1 class="text-lg sm:text-2xl font-bold text-gray-800 dark:text-gray-100 truncate">Climate Agent</h1>
+                </div>
+                <!-- LLM Provider Selector -->
+                <div class="flex items-center gap-2">
+                    <select id="llm-provider" class="text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Loading...</option>
+                    </select>
+                    <select id="llm-model" class="hidden sm:block text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 focus:ring-blue-500 focus:border-blue-500 max-w-32">
+                        <option value="">Default</option>
+                    </select>
                 </div>
                 <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0">
                     <a href="/" class="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Dashboard">
@@ -774,15 +784,25 @@ CHAT_PAGE_HTML = """
         async function sendMessage(message) {
             if (!message.trim()) return;
 
+            // Get selected provider and model
+            const providerSelect = document.getElementById('llm-provider');
+            const modelSelect = document.getElementById('llm-model');
+            const selectedProvider = providerSelect.value;
+            const selectedModel = modelSelect.value;
+
             addMessage(message, true);
             chatInput.value = '';
             setLoading(true);
 
             try {
+                const payload = { message: message };
+                if (selectedProvider) payload.provider = selectedProvider;
+                if (selectedModel) payload.model = selectedModel;
+
                 const response = await fetch('/api/chat/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await response.json();
@@ -790,7 +810,11 @@ CHAT_PAGE_HTML = """
                 if (data.error) {
                     addMessage('Error: ' + data.error, false);
                 } else {
-                    addMessage(data.response, false, data.tool_calls);
+                    // Include provider info in response
+                    const providerInfo = data.provider && data.model 
+                        ? `[${data.provider}/${data.model}] ` 
+                        : '';
+                    addMessage(providerInfo + data.response, false, data.tool_calls);
                 }
             } catch (error) {
                 addMessage('Failed to connect to the agent. Please try again.', false);
@@ -813,7 +837,58 @@ CHAT_PAGE_HTML = """
             });
         });
 
-        // Focus input on load
+        // LLM Provider Management
+        let availableProviders = [];
+
+        async function loadProviders() {
+            try {
+                const response = await fetch('/api/llm/providers');
+                availableProviders = await response.json();
+                
+                const providerSelect = document.getElementById('llm-provider');
+                providerSelect.innerHTML = '';
+                
+                availableProviders.forEach(p => {
+                    if (p.available) {
+                        const option = document.createElement('option');
+                        option.value = p.name;
+                        option.textContent = p.display_name;
+                        if (!p.configured) {
+                            option.textContent += ' (no key)';
+                            option.disabled = true;
+                        }
+                        providerSelect.appendChild(option);
+                    }
+                });
+
+                // Update model dropdown when provider changes
+                providerSelect.addEventListener('change', updateModelOptions);
+                updateModelOptions();
+            } catch (error) {
+                console.error('Failed to load providers:', error);
+            }
+        }
+
+        function updateModelOptions() {
+            const providerSelect = document.getElementById('llm-provider');
+            const modelSelect = document.getElementById('llm-model');
+            const selectedProvider = providerSelect.value;
+            
+            const provider = availableProviders.find(p => p.name === selectedProvider);
+            
+            modelSelect.innerHTML = '<option value="">Default</option>';
+            if (provider && provider.models) {
+                provider.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    modelSelect.appendChild(option);
+                });
+            }
+        }
+
+        // Initialize
+        loadProviders();
         chatInput.focus();
     </script>
 </body>
@@ -873,9 +948,16 @@ DASHBOARD_HTML = """
                     }
                 };
 
-                updateIndicator('indicator-ollama', 'ollama');
+                updateIndicator('indicator-llm', 'llm');
                 updateIndicator('indicator-weather', 'weather');
                 updateIndicator('indicator-ha', 'ha');
+                
+                // Update LLM provider info display
+                const llmLabel = document.querySelector('#indicator-llm .llm-label');
+                if (llmLabel && status.llm_provider) {
+                    llmLabel.textContent = status.llm_provider.charAt(0).toUpperCase() + status.llm_provider.slice(1);
+                    llmLabel.title = status.llm_model || 'unknown';
+                }
             } catch (e) {
                 console.error('Status check failed', e);
             }
@@ -1047,9 +1129,9 @@ DASHBOARD_HTML = """
                     <i data-lucide="activity" class="w-5 h-5 text-gray-400"></i>
                 </div>
                 <div class="flex justify-between items-center mt-2" id="health-indicators">
-                    <div id="indicator-ollama" class="flex flex-col items-center gap-1" title="Brain (Ollama)">
+                    <div id="indicator-llm" class="flex flex-col items-center gap-1" title="LLM Brain">
                         <i data-lucide="brain" class="w-6 h-6 text-gray-400"></i>
-                        <span class="text-xs text-gray-500">Brain</span>
+                        <span class="llm-label text-xs text-gray-500">LLM</span>
                         <span class="status-text text-xs font-medium text-gray-400">...</span>
                     </div>
                     <div id="indicator-weather" class="flex flex-col items-center gap-1" title="Weather Tools">
@@ -1832,24 +1914,28 @@ async def api_status():
     
     # Defaults if agent not initialized
     status = {
-        "ollama": False,
+        "llm": False,
+        "llm_provider": "unknown",
+        "llm_model": "unknown",
         "weather": False,
         "ha": False
     }
     
     if agent.initialized:
+        # Get LLM info
+        status["llm_provider"] = agent.llm.provider_name
+        status["llm_model"] = agent.llm.model
+        
         # Check components in parallel
-        # Note: We're doing real checks here, which might be slow. 
-        # For production, we might want to cache these or run in background.
         import asyncio
         results = await asyncio.gather(
-            agent.ollama.health_check(),
+            agent.llm.health_check(),
             agent.weather_client.health_check(),
             agent.ha_client.health_check(),
             return_exceptions=True
         )
         
-        status["ollama"] = results[0] if isinstance(results[0], bool) else False
+        status["llm"] = results[0] if isinstance(results[0], bool) else False
         status["weather"] = results[1] if isinstance(results[1], bool) else False
         status["ha"] = results[2] if isinstance(results[2], bool) else False
             
@@ -2025,6 +2111,15 @@ async def api_update_setting(key: str, request: Request):
     return {"status": "success", "key": key}
 
 
+@router.get("/api/llm/providers")
+async def api_llm_providers():
+    """Get list of available LLM providers with status."""
+    logger = DecisionLogger()
+    settings = await logger.get_all_settings()
+    settings_dict = {s["key"]: s["value"] for s in settings}
+    return get_available_providers(settings_dict)
+
+
 @router.get("/chat", response_class=HTMLResponse)
 async def chat_page(request: Request):
     """Render the chat page."""
@@ -2055,13 +2150,13 @@ async def api_chat_send(request: Request):
             # Check individual components for better error messages
             errors = []
 
-            # Check Ollama
+            # Check LLM provider
             try:
-                ollama_ok = await agent.ollama.health_check()
-                if not ollama_ok:
-                    errors.append("Ollama not responding")
+                llm_ok = await agent.llm.health_check()
+                if not llm_ok:
+                    errors.append(f"LLM ({agent.llm.provider_name}) not responding")
             except Exception as e:
-                errors.append(f"Ollama error: {e}")
+                errors.append(f"LLM error: {e}")
 
             # Check Weather MCP
             try:
@@ -2090,6 +2185,10 @@ async def api_chat_send(request: Request):
             except Exception as init_error:
                 chat_logger.error(f"Initialization error: {init_error}")
                 return {"error": f"Agent initialization failed: {str(init_error)}"}
+
+        # Get provider/model override from request (for chatbot switching)
+        provider_type = data.get("provider")  # Optional provider override
+        model_override = data.get("model")    # Optional model override
 
         # Get the chat system prompt from DB (or use a default)
         logger = DecisionLogger()
@@ -2128,8 +2227,23 @@ Always respond in English.""",
             else:
                 return {"error": f"Unknown tool: {name}"}
 
-        # Call Ollama with tools
-        result = await agent.ollama.chat_with_tools(
+        # Create LLM provider - use override if specified, otherwise use agent's default
+        if provider_type or model_override:
+            # Load settings for API keys
+            settings = await logger.get_all_settings()
+            settings_dict = {s["key"]: s["value"] for s in settings}
+            llm = create_llm_provider(
+                provider_type=provider_type,
+                model=model_override,
+                settings=settings_dict
+            )
+            chat_logger.info(f"Chat using override LLM: {llm.provider_name}/{llm.model}")
+        else:
+            llm = agent.llm
+            chat_logger.info(f"Chat using agent LLM: {llm.provider_name}/{llm.model}")
+
+        # Call LLM with tools
+        result = await llm.chat_with_tools(
             user_message=message,
             tools=tools,
             tool_executor=execute_tool,
@@ -2139,7 +2253,9 @@ Always respond in English.""",
 
         return {
             "response": result.get("final_response", "No response generated"),
-            "tool_calls": result.get("tool_calls_made", [])
+            "tool_calls": result.get("tool_calls_made", []),
+            "provider": llm.provider_name,
+            "model": llm.model,
         }
 
     except Exception as e:
