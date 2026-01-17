@@ -1,0 +1,7 @@
+[run]
+# Exclude optional cloud provider implementations from coverage
+# These require external SDKs (openai, anthropic, google-generativeai)
+omit = 
+    */providers/openai.py
+    */providers/anthropic.py
+    */providers/google.py
