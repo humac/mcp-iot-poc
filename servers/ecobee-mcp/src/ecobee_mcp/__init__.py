@@ -1,0 +1,1 @@
+"""Ecobee MCP Server package."""

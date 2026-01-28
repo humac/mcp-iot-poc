@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 WEATHER_MCP_URL = os.getenv("WEATHER_MCP_URL", "http://weather-mcp:8080")
-HA_MCP_URL = os.getenv("HA_MCP_URL", "http://homeassistant-mcp:8080")
+CLIMATE_MCP_URL = os.getenv("CLIMATE_MCP_URL", "http://ecobee-mcp:8080")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL_MINUTES", "30"))
 MIN_TEMP = float(os.getenv("MIN_TEMP", "17"))
 MAX_TEMP = float(os.getenv("MAX_TEMP", "23"))
@@ -147,7 +147,7 @@ class ClimateAgent:
     
     def __init__(self):
         self.weather_client = MCPClient(WEATHER_MCP_URL, "weather-mcp")
-        self.ha_client = MCPClient(HA_MCP_URL, "homeassistant-mcp")
+        self.climate_client = MCPClient(CLIMATE_MCP_URL, "ecobee-mcp")
         self.llm = create_llm_provider()  # Use factory for LLM provider
         self.logger = DecisionLogger()
         self.baseline = BaselineAutomation(self.logger)  # Pass logger to BaselineAutomation
@@ -171,8 +171,8 @@ class ClimateAgent:
             logger.error("Failed to initialize weather MCP client")
             return False
         
-        if not await self.ha_client.initialize():
-            logger.error("Failed to initialize HA MCP client")
+        if not await self.climate_client.initialize():
+            logger.error("Failed to initialize Climate MCP client")
             return False
         
         self.initialized = True
@@ -257,12 +257,12 @@ REMINDER: Always respond in English. Do not use Chinese or any other language.""
     async def execute_tool(self, tool_name: str, arguments: dict) -> dict:
         """Route tool calls to the appropriate MCP server."""
         weather_tools = {"get_current_weather", "get_forecast"}
-        ha_tools = {"get_thermostat_state", "set_thermostat_temperature", "set_hvac_mode", "set_preset_mode"}
+        climate_tools = {"get_thermostat_state", "set_thermostat_temperature", "set_hvac_mode", "set_preset_mode"}
         
         if tool_name in weather_tools:
             return await self.weather_client.call_tool(tool_name, arguments)
-        elif tool_name in ha_tools:
-            return await self.ha_client.call_tool(tool_name, arguments)
+        elif tool_name in climate_tools:
+            return await self.climate_client.call_tool(tool_name, arguments)
         else:
             return {"error": f"Unknown tool: {tool_name}"}
     
@@ -347,7 +347,7 @@ REMINDER: Always respond in English. Do not use Chinese or any other language.""
         # Combine tools from both MCP servers
         all_tools = (
             self.weather_client.get_tools_for_llm() +
-            self.ha_client.get_tools_for_llm()
+            self.climate_client.get_tools_for_llm()
         )
         
         # Run the agent loop
@@ -560,7 +560,7 @@ def main():
     """Main entry point."""
     logger.info("Starting Climate Agent")
     logger.info(f"Weather MCP: {WEATHER_MCP_URL}")
-    logger.info(f"HA MCP: {HA_MCP_URL}")
+    logger.info(f"Climate MCP: {CLIMATE_MCP_URL}")
     logger.info(f"Check interval: {CHECK_INTERVAL} minutes")
 
     # Create scheduler

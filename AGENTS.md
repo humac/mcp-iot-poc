@@ -18,7 +18,7 @@ AI-powered thermostat control using Model Context Protocol (MCP). Compares AI de
 mcp-iot-poc/
 ├── agent/src/climate_agent/  → Main app, FastAPI dashboard, port 8080
 ├── servers/weather-mcp/      → Open-Meteo API wrapper, port 8081
-└── servers/homeassistant-mcp/→ HA REST API wrapper, port 8082
+└── servers/ecobee-mcp/→ Ecobee API wrapper, port 8082
 ```
 
 ## Critical Rules 🚨
@@ -55,7 +55,7 @@ cd agent && pip install -e ".[dev]" && pytest tests/ -v
 
 # Test MCP servers
 curl http://localhost:8081/health  # weather-mcp
-curl http://localhost:8082/health  # homeassistant-mcp
+curl http://localhost:8082/health  # ecobee-mcp
 ```
 
 ## Environment Variables

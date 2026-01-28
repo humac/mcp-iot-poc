@@ -56,8 +56,8 @@ jobs:
         include:
           - name: weather-mcp
             context: ./servers/weather-mcp
-          - name: homeassistant-mcp
-            context: ./servers/homeassistant-mcp
+          - name: ecobee-mcp
+            context: ./servers/ecobee-mcp
           - name: climate-agent
             context: ./agent
 
