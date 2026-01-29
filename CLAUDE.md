@@ -12,7 +12,8 @@ AI-powered thermostat control using Model Context Protocol (MCP). Compares AI de
 ## Critical Rules 🚨
 
 1. **No SSWS/API Keys**: All auth uses OAuth2 or Bearer tokens
-2. **Temperature Bounds**: Always enforce MIN_TEMP/MAX_TEMP (17-23°C default)
+2. **Thermostat Selection**: Use `ECOBEE_THERMOSTAT_INDEX` (0-based) to select target device if multiple exist.
+3. **Temperature Bounds**: Always enforce MIN_TEMP/MAX_TEMP (17-23°C default)
 3. **MCP Protocol**: Use JSON-RPC 2.0 over HTTP POST to `/mcp`
 4. **Tool Validation**: LLMs may pass invalid params - always validate inputs
 5. **Async Only**: All HTTP calls must be async with `httpx.AsyncClient`

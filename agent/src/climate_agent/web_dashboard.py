@@ -950,7 +950,7 @@ DASHBOARD_HTML = """
 
                 updateIndicator('indicator-llm', 'llm');
                 updateIndicator('indicator-weather', 'weather');
-                updateIndicator('indicator-ha', 'ha');
+                updateIndicator('indicator-climate', 'ecobee');
                 
                 // Update LLM provider info display
                 const llmLabel = document.querySelector('#indicator-llm .llm-label');
@@ -1139,9 +1139,9 @@ DASHBOARD_HTML = """
                         <span class="text-xs text-gray-500">Weather</span>
                         <span class="status-text text-xs font-medium text-gray-400">...</span>
                     </div>
-                    <div id="indicator-ha" class="flex flex-col items-center gap-1" title="Home Control">
-                        <i data-lucide="home" class="w-6 h-6 text-gray-400"></i>
-                        <span class="text-xs text-gray-500">Home</span>
+                    <div id="indicator-climate" class="flex flex-col items-center gap-1" title="Climate Control">
+                        <i data-lucide="thermometer" class="w-6 h-6 text-gray-400"></i>
+                        <span class="text-xs text-gray-500">Ecobee</span>
                         <span class="status-text text-xs font-medium text-gray-400">...</span>
                     </div>
                 </div>
@@ -1678,10 +1678,16 @@ async def get_dashboard_html(request: Request) -> HTMLResponse:
 
     # Handle current state
     if current_state:
-        html = html.replace("{{ current_state.current_temp }}", str(current_state["current_temp"]))
-        html = html.replace("{{ current_state.target_temp }}", str(current_state["target_temp"]))
+        # Helper to format temp
+        def fmt_temp(v):
+            if isinstance(v, (int, float)):
+                return f"{round(v, 1)}"
+            return str(v)
+
+        html = html.replace("{{ current_state.current_temp }}", fmt_temp(current_state["current_temp"]))
+        html = html.replace("{{ current_state.target_temp }}", fmt_temp(current_state["target_temp"]))
         html = html.replace("{{ current_state.hvac_mode }}", str(current_state["hvac_mode"]))
-        html = html.replace("{{ current_state.outside_temp }}", str(current_state["outside_temp"]))
+        html = html.replace("{{ current_state.outside_temp }}", fmt_temp(current_state["outside_temp"]))
     else:
         html = html.replace("{{ current_state.current_temp }}", "?")
         html = html.replace("{{ current_state.target_temp }}", "?")
@@ -1907,10 +1913,10 @@ async def api_hourly():
 
 
 @router.get("/api/status")
-async def api_status():
+async def api_status(request: Request):
     """Get health status of agent components."""
-    from . import main as agent_main
-    agent = agent_main.agent
+    # Access singleton agent from app state
+    agent = request.app.state.agent
     
     # Defaults if agent not initialized
     status = {
@@ -1918,7 +1924,7 @@ async def api_status():
         "llm_provider": "unknown",
         "llm_model": "unknown",
         "weather": False,
-        "ha": False
+        "ecobee": False
     }
     
     if agent.initialized:
@@ -1931,13 +1937,13 @@ async def api_status():
         results = await asyncio.gather(
             agent.llm.health_check(),
             agent.weather_client.health_check(),
-            agent.ha_client.health_check(),
+            agent.ecobee_client.health_check(),
             return_exceptions=True
         )
         
         status["llm"] = results[0] if isinstance(results[0], bool) else False
         status["weather"] = results[1] if isinstance(results[1], bool) else False
-        status["ha"] = results[2] if isinstance(results[2], bool) else False
+        status["ecobee"] = results[2] if isinstance(results[2], bool) else False
             
     return status
 
@@ -2139,9 +2145,8 @@ async def api_chat_send(request: Request):
         if not message:
             return {"error": "Message required"}
 
-        # Import the agent from main module
-        from . import main as agent_main
-        agent = agent_main.agent
+        # Access singleton agent from app state
+        agent = request.app.state.agent
 
         if not agent.initialized:
             # Try to initialize on-demand
@@ -2168,11 +2173,11 @@ async def api_chat_send(request: Request):
 
             # Check HA MCP
             try:
-                ha_ok = await agent.ha_client.health_check()
-                if not ha_ok:
-                    errors.append("Home Assistant MCP not responding")
+                climate_ok = await agent.ecobee_client.health_check()
+                if not climate_ok:
+                    errors.append("Ecobee MCP not responding")
             except Exception as e:
-                errors.append(f"HA MCP error: {e}")
+                errors.append(f"Ecobee MCP error: {e}")
 
             if errors:
                 return {"error": f"Agent cannot initialize. Issues: {'; '.join(errors)}"}
@@ -2212,7 +2217,7 @@ Always respond in English.""",
         # Combine tools from both MCP clients
         tools = []
         tools.extend(agent.weather_client.get_tools_for_llm())
-        tools.extend(agent.ha_client.get_tools_for_llm())
+        tools.extend(agent.ecobee_client.get_tools_for_llm())
 
         # Tool executor that routes to the correct MCP client
         async def execute_tool(name: str, arguments: dict):
@@ -2221,9 +2226,9 @@ Always respond in English.""",
             # Weather tools
             if name in ["get_current_weather", "get_forecast"]:
                 return await agent.weather_client.call_tool(name, arguments)
-            # HA tools
+            # Climate tools
             elif name in ["get_thermostat_state", "set_thermostat_temperature", "set_hvac_mode", "set_preset_mode"]:
-                return await agent.ha_client.call_tool(name, arguments)
+                return await agent.ecobee_client.call_tool(name, arguments)
             else:
                 return {"error": f"Unknown tool: {name}"}
 

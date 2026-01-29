@@ -20,3 +20,6 @@ dependencies = [
 [project.scripts]
 ecobee-mcp = "ecobee_mcp.server:main"
 ecobee-auth = "ecobee_mcp.auth_setup:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ecobee_mcp"]

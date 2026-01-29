@@ -126,7 +126,9 @@ Edit `.env` with your details:
 # Ecobee
 ECOBEE_API_KEY=your_api_key_here
 ECOBEE_REFRESH_TOKEN=your_refresh_token_here
-CLIMATE_MCP_URL=http://ecobee-mcp:8080
+ECOBEE_REFRESH_TOKEN=your_refresh_token_here
+ECOBEE_THERMOSTAT_INDEX=0  # 0 for first thermostat, 1 for second, etc.
+ECOBEE_MCP_URL=http://ecobee-mcp:8080
 
 # Ollama
 OLLAMA_URL=http://10.0.30.3:11434

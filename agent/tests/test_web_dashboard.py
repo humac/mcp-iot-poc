@@ -26,7 +26,7 @@ async def test_api_status_success():
         mock_agent.llm.model = "llama3.1:8b"
         mock_agent.llm.health_check = AsyncMock(return_value=True)
         mock_agent.weather_client.health_check = AsyncMock(return_value=True)
-        mock_agent.ha_client.health_check = AsyncMock(return_value=True)
+        mock_agent.ecobee_client.health_check = AsyncMock(return_value=True)
         
         # Make request
         response = client.get("/api/status")
@@ -37,7 +37,7 @@ async def test_api_status_success():
         assert data["llm"] is True
         assert data["llm_provider"] == "ollama"
         assert data["weather"] is True
-        assert data["ha"] is True
+        assert data["ecobee"] is True
 
 
 @pytest.mark.asyncio
@@ -52,7 +52,7 @@ async def test_api_status_partial_failure():
         mock_agent.llm.model = "gpt-4o"
         mock_agent.llm.health_check = AsyncMock(return_value=False)
         mock_agent.weather_client.health_check = AsyncMock(return_value=True)
-        mock_agent.ha_client.health_check = AsyncMock(return_value=True)
+        mock_agent.ecobee_client.health_check = AsyncMock(return_value=True)
         
         # Make request
         response = client.get("/api/status")
@@ -63,7 +63,7 @@ async def test_api_status_partial_failure():
         assert data["llm"] is False
         assert data["llm_provider"] == "openai"
         assert data["weather"] is True
-        assert data["ha"] is True
+        assert data["ecobee"] is True
 
 
 @pytest.mark.asyncio
@@ -82,4 +82,4 @@ async def test_api_status_not_initialized():
         assert data["llm"] is False
         assert data["llm_provider"] == "unknown"
         assert data["weather"] is False
-        assert data["ha"] is False
+        assert data["ecobee"] is False

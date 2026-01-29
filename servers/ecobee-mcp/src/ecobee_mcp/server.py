@@ -115,7 +115,11 @@ class EcobeeClient:
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         
         async with httpx.AsyncClient() as client:
-            resp = await client.request(method, url, headers=headers, json=data, timeout=10.0)
+            if method.upper() == "GET":
+                resp = await client.request(method, url, headers=headers, params=data, timeout=10.0)
+            else:
+                resp = await client.request(method, url, headers=headers, json=data, timeout=10.0)
+            
             resp.raise_for_status()
             return resp.json()
 
@@ -136,7 +140,19 @@ class EcobeeClient:
         thermostats = data.get("thermostatList", [])
         if not thermostats:
             raise ValueError("No thermostats found on account")
-        return thermostats[0]
+            
+        # Select specific thermostat if multiple exist
+        try:
+            index = int(os.getenv("ECOBEE_THERMOSTAT_INDEX", "0"))
+        except ValueError:
+            logger.warning("Invalid ECOBEE_THERMOSTAT_INDEX, defaulting to 0")
+            index = 0
+            
+        if index >= len(thermostats):
+            logger.warning(f"Thermostat index {index} out of range (found {len(thermostats)}), defaulting to 0")
+            index = 0
+            
+        return thermostats[index]
 
     async def update_thermostat(self, thermostat_id: str, json_body: dict):
         """Update thermostat settings."""
@@ -222,18 +238,23 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             settings = thermostat["settings"]
             events = thermostat["events"]
             
-            # Use runtime.desired* based on mode, but check events for active holds
-            current_temp = runtime["actualTemperature"] / 10.0  # Ecobee sends temp * 10
+            # Ecobee returns (F * 10). Convert to C.
+            # C = (F - 32) * 5/9
+            def f10_to_c(f10):
+                f = f10 / 10.0
+                return (f - 32) * 5/9
+
+            current_temp = f10_to_c(runtime["actualTemperature"])
             
             # Determine target temp
             hvac_mode = settings["hvacMode"]
             target_temp = None
             if hvac_mode == "heat":
-                target_temp = runtime["desiredHeat"] / 10.0
+                target_temp = f10_to_c(runtime["desiredHeat"])
             elif hvac_mode == "cool":
-                target_temp = runtime["desiredCool"] / 10.0
+                target_temp = f10_to_c(runtime["desiredCool"])
             elif hvac_mode == "auto":
-                target_temp = (runtime["desiredHeat"] / 10.0 + runtime["desiredCool"] / 10.0) / 2
+                target_temp = (f10_to_c(runtime["desiredHeat"]) + f10_to_c(runtime["desiredCool"])) / 2
             
             # Check for active holds (event[0] if running)
             active_hold = None
