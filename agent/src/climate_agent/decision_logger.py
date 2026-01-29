@@ -447,14 +447,21 @@ class DecisionLogger:
             await db.commit()
             return str(default)
 
-    async def update_setting(self, key: str, value: str) -> bool:
-        """Update a setting."""
+    async def update_setting(self, key: str, value: str, description: str = "", category: str = "General") -> bool:
+        """Update a setting, creating it if it doesn't exist."""
         async with aiosqlite.connect(self.db_path) as db:
             now = datetime.now().isoformat()
-            await db.execute(
+            # Try update first
+            cursor = await db.execute(
                 "UPDATE settings SET value = ?, updated_at = ? WHERE key = ?",
                 (str(value), now, key)
             )
+            if cursor.rowcount == 0:
+                # Insert if not exists
+                await db.execute(
+                    "INSERT INTO settings (key, value, description, category, updated_at) VALUES (?, ?, ?, ?, ?)",
+                    (key, str(value), description, category, now)
+                )
             await db.commit()
             return True
 

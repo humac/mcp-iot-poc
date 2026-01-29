@@ -13,7 +13,7 @@ COPY pyproject.toml .
 COPY src/ src/
 
 # Install dependencies
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -e ".[all-llm]"
 
 # Expose dashboard port
 EXPOSE 8080

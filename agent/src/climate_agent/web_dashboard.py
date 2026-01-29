@@ -365,7 +365,7 @@ SETTINGS_PAGE_HTML = """
         <div class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-4">
                  <a href="/" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-2">
-                    <i data-lucide="arrow-left"></i> Back to Dashboard
+                    <i data-lucide="arrow-left"></i> Back
                  </a>
                  <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
                     <i data-lucide="settings"></i> Settings
@@ -379,6 +379,19 @@ SETTINGS_PAGE_HTML = """
                     <i data-lucide="moon" id="theme-toggle-dark-icon" class="hidden w-5 h-5"></i>
                     <i data-lucide="sun" id="theme-toggle-light-icon" class="hidden w-5 h-5"></i>
                 </button>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mb-8">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i data-lucide="info" class="h-5 w-5 text-blue-500"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700 dark:text-blue-300">
+                        Settings saved here <strong>override</strong> environment variables. Resume the agent (restart container) for non-dynamic settings to take full effect.
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -435,56 +448,78 @@ SETTINGS_PAGE_HTML = """
         // Load Settings
         async function loadSettings() {
             try {
-                const response = await fetch('/api/settings');
-                const settings = await response.json();
+                // Fetch settings and providers in parallel
+                const [settingsRes, providersRes] = await Promise.all([
+                    fetch('/api/settings'),
+                    fetch('/api/llm/providers')
+                ]);
+                
+                const settings = await settingsRes.json();
+                const providers = await providersRes.json();
                 
                 const container = document.getElementById('settings-container');
                 container.innerHTML = '';
                 
-                // Group by category
-                const groups = {};
+                // Define logic for categories
+                const categories = {
+                    'LLM': [],
+                    'Agent': [],
+                    'Baseline': [],
+                    'General': []
+                };
+
+                // Manually add API keys if they don't exist in fetched settings
+                const apiKeys = ['openai_api_key', 'anthropic_api_key', 'google_api_key', 'ollama_url'];
+                apiKeys.forEach(key => {
+                    if (!settings.find(s => s.key === key)) {
+                        let cat = 'LLM';
+                        let desc = '';
+                        if (key.includes('url')) desc = 'Base URL for Ollama (optional)';
+                        else desc = 'API Key (overrides env var)';
+                        
+                        settings.push({
+                            key: key,
+                            value: '',
+                            category: cat,
+                            description: desc
+                        });
+                    }
+                });
+
+                // Group settings
                 settings.forEach(s => {
-                    if (!groups[s.category]) groups[s.category] = [];
-                    groups[s.category].push(s);
+                    if (categories[s.category]) {
+                        categories[s.category].push(s);
+                    } else {
+                        categories['General'].push(s);
+                    }
                 });
 
-                // Render groups
-                Object.keys(groups).forEach(category => {
-                    const groupDiv = document.createElement('div');
-                    groupDiv.className = 'bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden';
-                    
-                    let html = `
-                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
-                            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">${category || 'General'}</h2>
-                        </div>
-                        <div class="p-6 space-y-6">
-                    `;
+                // Render LLM Category First
+                renderLLMSection(categories['LLM'], providers, container);
+                delete categories['LLM'];
 
-                    groups[category].forEach(setting => {
-                        html += `
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                                <div class="md:col-span-2">
-                                    <label for="${setting.key}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        ${formatKey(setting.key)}
-                                    </label>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">${setting.description}</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="text" id="${setting.key}" value="${setting.value}" 
-                                        class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                                    <button onclick="saveSetting('${setting.key}')"
-                                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-                                        Save
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    html += '</div>';
-                    groupDiv.innerHTML = html;
-                    container.appendChild(groupDiv);
+                // Render other categories
+                Object.keys(categories).forEach(cat => {
+                    if (categories[cat].length > 0) {
+                        renderSection(cat, categories[cat], container);
+                    }
                 });
+
+                // Add Global Save Button
+                const saveDiv = document.createElement('div');
+                saveDiv.className = 'sticky bottom-4 z-10 flex justify-end';
+                saveDiv.innerHTML = `
+                    <button onclick="saveAllSettings()" id="global-save-btn" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg flex items-center gap-2 transform transition-all hover:scale-105 active:scale-95">
+                        <i data-lucide="save" class="w-5 h-5"></i>
+                        Save Changes
+                    </button>
+                    <div id="save-status" class="hidden fixed bottom-20 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg"></div>
+                `;
+                container.appendChild(saveDiv);
+                
+                lucide.createIcons();
                 
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -496,42 +531,201 @@ SETTINGS_PAGE_HTML = """
             }
         }
 
-        async function saveSetting(key) {
-            const input = document.getElementById(key);
-            const value = input.value;
-            const btn = event.target;
-            const originalText = btn.innerText;
+        function renderLLMSection(settings, providers, container) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-8';
+            
+            // Extract specific settings for custom controls
+            const providerSetting = settings.find(s => s.key === 'llm_provider');
+            const modelSetting = settings.find(s => s.key === 'llm_model');
+            const otherSettings = settings.filter(s => s.key !== 'llm_provider' && s.key !== 'llm_model');
 
+            let html = `
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                        <i data-lucide="brain" class="w-5 h-5"></i> LLM Configuration
+                    </h2>
+                </div>
+                <div class="p-6 space-y-6">
+            `;
+
+            // Provider Dropdown
+            if (providerSetting) {
+                html += `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                AI Provider
+                            </label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Select the backend AI service</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="llm_provider" data-key="llm_provider"
+                                class="setting-input flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                ${providers.map(p => `
+                                    <option value="${p.name}" ${p.name === providerSetting.value ? 'selected' : ''}>
+                                        ${p.display_name}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Model Input
+            if (modelSetting) {
+                html += `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Model Name
+                            </label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Detailed model string (e.g. gpt-4o, llama3)</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="llm_model" data-key="llm_model" value="${modelSetting.value}" placeholder="(default)"
+                                class="setting-input flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Other Settings (API Keys mostly)
+            otherSettings.forEach(s => {
+                const isKey = s.key.includes('api_key');
+                const inputType = isKey ? 'password' : 'text';
+                
+                html += `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                ${formatKey(s.key)}
+                            </label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">${s.description}</p>
+                        </div>
+                        <div class="flex gap-2 relative">
+                            <input type="${inputType}" id="${s.key}" data-key="${s.key}" value="${s.value}" 
+                                class="setting-input flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${isKey ? 'pr-10' : ''}">
+                            
+                            ${isKey ? `
+                                <button onclick="toggleVisibility('${s.key}')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            groupDiv.innerHTML = html;
+            container.appendChild(groupDiv);
+        }
+
+        function renderSection(category, settings, container) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-8';
+            
+            let html = `
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">${category}</h2>
+                </div>
+                <div class="p-6 space-y-6">
+            `;
+
+            settings.forEach(s => {
+                html += `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                ${formatKey(s.key)}
+                            </label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">${s.description || ''}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="${s.key}" data-key="${s.key}" value="${s.value}" 
+                                class="setting-input flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            groupDiv.innerHTML = html;
+            container.appendChild(groupDiv);
+        }
+
+        async function saveAllSettings() {
+            const btn = document.getElementById('global-save-btn');
+            const statusDiv = document.getElementById('save-status');
+            const originalText = btn.innerHTML;
+            
             try {
                 btn.disabled = true;
-                btn.innerText = '...';
+                btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> Saving...';
                 
-                const response = await fetch(`/api/settings/${key}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ value })
+                // Collect all inputs
+                const inputs = document.querySelectorAll('.setting-input');
+                const updates = [];
+                
+                inputs.forEach(input => {
+                    const key = input.dataset.key;
+                    // For selects, value is value. For inputs, value is value.
+                    const value = input.value;
+                    updates.push({ key, value });
                 });
 
-                if (response.ok) {
-                    const originalClass = btn.className;
-                    btn.className = "text-white bg-green-600 hover:bg-green-700 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none";
-                    btn.innerText = 'Saved';
-                    setTimeout(() => {
-                        btn.className = originalClass;
-                        btn.innerText = originalText;
-                        btn.disabled = false;
-                    }, 2000);
-                } else {
-                    throw new Error('Failed to save');
-                }
-            } catch (error) {
-                console.error(error);
-                btn.innerText = 'Error';
-                btn.className = "text-white bg-red-600 hover:bg-red-700 font-medium rounded-lg text-sm px-4 py-2";
+                // Send updates sequentially or in parallel
+                // Parallel is faster but might hit limits. Let's do parallel
+                const promises = updates.map(u => 
+                    fetch(`/api/settings/${u.key}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ value: u.value })
+                    })
+                );
+
+                await Promise.all(promises);
+
+                // Show success
+                statusDiv.classList.remove('hidden');
+                statusDiv.classList.remove('bg-red-600');
+                statusDiv.classList.add('bg-green-600');
+                statusDiv.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Saved successfully</div>';
+                
+                // Reset button
+                btn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> Saved';
                 setTimeout(() => {
                     btn.disabled = false;
-                    btn.innerText = originalText;
+                    btn.innerHTML = originalText;
+                    statusDiv.classList.add('hidden');
+                }, 2000);
+
+            } catch (error) {
+                console.error('Save failed:', error);
+                // Show error
+                statusDiv.classList.remove('hidden');
+                statusDiv.classList.remove('bg-green-600');
+                statusDiv.classList.add('bg-red-600');
+                statusDiv.innerHTML = '<div class="flex items-center gap-2"><i data-lucide="alert-circle" class="w-4 h-4"></i> Save failed</div>';
+                
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                
+                setTimeout(() => {
+                    statusDiv.classList.add('hidden');
                 }, 3000);
+            }
+            lucide.createIcons();
+        }
+
+        function toggleVisibility(id) {
+            const input = document.getElementById(id);
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
             }
         }
 
@@ -744,7 +938,7 @@ CHAT_PAGE_HTML = """
                     toolCallsHtml += `
                         <div class="text-xs bg-gray-200 dark:bg-gray-600 rounded px-2 py-1 inline-flex items-center gap-1">
                             <i data-lucide="wrench" class="w-3 h-3"></i>
-                            <span class="font-mono">${tc.name}</span>
+                            <span class="font-mono">${tc.tool}</span>
                         </div>
                     `;
                 });
@@ -2198,7 +2392,7 @@ async def api_chat_send(request: Request):
         # Get the chat system prompt from DB (or use a default)
         logger = DecisionLogger()
         chat_system_prompt = await logger.get_prompt(
-            "chat_system_prompt",
+            "chat_system_prompt_v2",
             """You are the Climate Agent assistant. You help users understand and control their home climate system.
 
 You have access to tools to:
@@ -2207,10 +2401,14 @@ You have access to tools to:
 - View thermostat state
 - Adjust the thermostat temperature (only when explicitly asked)
 
-Be helpful, concise, and informative. When users ask about the weather or thermostat, use your tools to get real data.
-When users ask to change the temperature, confirm what you're doing.
-
-Always respond in English.""",
+## CRITICAL RULES:
+1. When a user asks for data (weather, thermostat), you MUST use the corresponding tool. Do NOT guess.
+2. When a user asks to CHANGE something (e.g., "Set temp to 21"), you MUST call the `set_thermostat_temperature` tool.
+   - Do NOT just say you did it without calling the tool.
+   - Do NOT say "I have updated..." if you haven't called the tool first.
+   - If the tool call fails or isn't available, explain that you can't do it.
+3. Always respond in English.
+4. Be helpful, concise, and friendly.""",
             "System prompt for the interactive chat feature"
         )
 

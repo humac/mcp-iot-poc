@@ -186,6 +186,25 @@ class TestDecisionLoggerSettings:
             
             await logger.close()
 
+    @pytest.mark.asyncio
+    async def test_update_setting_upsert(self):
+        """Test updating a non-existent setting creates it (UPSERT)."""
+        from climate_agent.decision_logger import DecisionLogger
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "test.db")
+            logger = DecisionLogger(db_path)
+            await logger.initialize()
+            
+            # Update non-existent key
+            await logger.update_setting("new_upsert_key", "upserted_value")
+            
+            # Verify it exists now
+            value = await logger.get_setting("new_upsert_key", "default")
+            assert value == "upserted_value"
+            
+            await logger.close()
+
 
 class TestDecisionLoggerPrompts:
     """Test prompt management."""
