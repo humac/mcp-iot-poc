@@ -28,6 +28,9 @@ async def test_api_status_success():
         mock_agent.weather_client.health_check = AsyncMock(return_value=True)
         mock_agent.ecobee_client.health_check = AsyncMock(return_value=True)
         
+        # Inject mock agent into app state (required by web_dashboard)
+        app.state.agent = mock_agent
+        
         # Make request
         response = client.get("/api/status")
         
@@ -53,6 +56,9 @@ async def test_api_status_partial_failure():
         mock_agent.llm.health_check = AsyncMock(return_value=False)
         mock_agent.weather_client.health_check = AsyncMock(return_value=True)
         mock_agent.ecobee_client.health_check = AsyncMock(return_value=True)
+
+        # Inject mock agent into app state
+        app.state.agent = mock_agent
         
         # Make request
         response = client.get("/api/status")
@@ -73,6 +79,9 @@ async def test_api_status_not_initialized():
     with patch("src.climate_agent.main.agent") as mock_agent:
         mock_agent.initialized = False
         
+        # Inject mock agent into app state
+        app.state.agent = mock_agent
+
         # Make request
         response = client.get("/api/status")
         
