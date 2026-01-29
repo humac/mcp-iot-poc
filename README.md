@@ -17,15 +17,15 @@ This project compares AI-driven decision making against traditional rule-based H
 │  Docker Environment                                                 │
 │                                                                     │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────────┐  │
-│  │ LLM Provider│  │ Weather MCP │  │ HA MCP      │  │ Agent      │  │
+│  │ LLM Provider│  │ Weather MCP │  │ Ecobee MCP  │  │ Agent      │  │
 │  │ (Ollama/    │◄─┤ Server      │◄─┤ Server      │◄─┤ Loop       │  │
 │  │ OpenAI/etc) │  │ :8081       │  │ :8082       │  │ :8080      │  │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └────────────┘  │
 │                          │                 │                        │
 └──────────────────────────┼─────────────────┼────────────────────────┘
                            │                 │
-                     Open-Meteo API    Home Assistant
-                      (Internet)         (Local)
+                    Open-Meteo API       Ecobee API
+                      (Internet)         (Internet)
 ```
 
 ### Components
@@ -346,8 +346,15 @@ curl -X POST http://localhost:8081/mcp \
 - `GET /login` - Login page (if auth enabled)
 - `GET /logout` - Logout and clear session
 - `GET /prompts` - Prompt configuration page
-- `GET /settings` - Agent settings page
-- `GET /chat` - Chat with agent
+- `GET /settings` - Agent settings page (Global Save available)
+- `GET /chat` - Chat with agent (configurable LLM)
+
+### Settings & Configuration
+The Settings page (`/settings`) allows dynamic configuration of:
+- **LLM Provider & Model**: Switch between Ollama, OpenAI, etc. on the fly.
+- **API Keys**: Securely manage API keys for cloud providers (stored in local DB, overrides env vars).
+- **Agent Parameters**: Adjust temperature bounds, check intervals, etc.
+- **Global Save**: Save all settings at once with a single click.
 
 ### API
 - `GET /health` - Health check

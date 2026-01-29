@@ -159,6 +159,12 @@ class ClimateAgent:
         
         # Initialize database
         await self.logger.initialize()
+
+        # Reload LLM provider from settings to ensure we use configured keys/provider
+        # This fixes the issue where the dashboard shows "DOWN" because startup used env vars
+        settings = await self.logger.get_all_settings()
+        settings_dict = {s["key"]: s["value"] for s in settings}
+        self.llm = create_llm_provider(settings=settings_dict)
         
         # Check LLM provider
         if not await self.llm.health_check():

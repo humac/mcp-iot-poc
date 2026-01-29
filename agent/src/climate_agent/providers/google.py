@@ -145,10 +145,12 @@ class GoogleProvider(LLMProvider):
             
             # Add system instruction if provided
             if system_prompt:
-                self.generative_model = genai.GenerativeModel(
+                model = genai.GenerativeModel(
                     self.model,
                     system_instruction=system_prompt,
                 )
+            else:
+                model = self.generative_model
             
             # Convert messages to Gemini format
             for msg in messages:
@@ -171,7 +173,7 @@ class GoogleProvider(LLMProvider):
             logger.debug(f"Gemini request: model={self.model}, contents={len(contents)}")
             
             # Generate response
-            response = await self.generative_model.generate_content_async(
+            response = await model.generate_content_async(
                 contents,
                 tools=gemini_tools,
             )

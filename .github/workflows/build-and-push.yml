@@ -90,17 +90,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: github.event_name != 'pull_request'
-
-    steps:
-      - name: Trigger Komodo Deploy
-        run: |
-          curl -X POST "${{ secrets.KOMODO_WEBHOOK_URL }}" \
-          -H "x-gh-action-auth: ${{ secrets.MY_CF_BYPASS_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0" \
-          --fail --verbose
 

@@ -156,9 +156,8 @@ class EcobeeClient:
 
     async def update_thermostat(self, thermostat_id: str, json_body: dict):
         """Update thermostat settings."""
-        # Ecobee updates are done via functions on 1/thermostat endpoint
-        url = f"1/thermostat?json={json.dumps(json_body)}"
-        await self.make_request("POST", url)
+        # Ecobee updates can be done via body
+        await self.make_request("POST", "1/thermostat", data=json_body)
 
 
 ecobee = EcobeeClient()
