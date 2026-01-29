@@ -301,6 +301,15 @@ class DecisionLogger:
             for row in rows:
                 weather = json.loads(row[6]) if row[6] else {}
                 thermostat = json.loads(row[7]) if row[7] else {}
+                
+                # Filter out bad data (e.g. Fahrenheit values > 50°C)
+                indoor_temp = thermostat.get("current_temperature")
+                if isinstance(indoor_temp, (int, float)) and indoor_temp > 50:
+                    continue  # Skip this bad data point
+                
+                outdoor_temp = weather.get("temperature_c")
+                if isinstance(outdoor_temp, (int, float)) and outdoor_temp > 50:
+                    continue
 
                 timeline.append({
                     "timestamp": row[0],
@@ -309,8 +318,8 @@ class DecisionLogger:
                     "baseline_action": row[3],
                     "baseline_temperature": row[4],
                     "decisions_match": row[5],
-                    "outdoor_temp": weather.get("temperature_c"),
-                    "indoor_temp": thermostat.get("current_temperature"),
+                    "outdoor_temp": outdoor_temp,
+                    "indoor_temp": indoor_temp,
                     "target_temp": thermostat.get("target_temperature"),
                 })
 

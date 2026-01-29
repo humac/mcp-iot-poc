@@ -33,7 +33,7 @@ This project compares AI-driven decision making against traditional rule-based H
 | Component | Port | Description |
 |-----------|------|-------------|
 | `weather-mcp` | 8081 | MCP server wrapping Open-Meteo weather API |
-| `homeassistant-mcp` | 8082 | MCP server for Home Assistant climate control |
+| `ecobee-mcp` | 8082 | MCP server for direct Ecobee thermostat control |
 | `agent` | 8080 | Autonomous agent with web dashboard |
 | LLM Provider | varies | Ollama (local), OpenAI, Anthropic, or Google Gemini |
 
@@ -103,7 +103,7 @@ pip install -e ".[google]"
 
 - **Docker** and **docker-compose**
 - **Ollama** with a model pulled (for local LLM), OR API keys for cloud providers
-- **Home Assistant** with a climate entity (thermostat)
+- **Ecobee Account** with a registered thermostat and Developer access
 - Network connectivity between containers and HA
 
 ## 🚀 Quick Start
@@ -123,10 +123,12 @@ cp .env.example .env
 Edit `.env` with your details:
 
 ```bash
-# Home Assistant
-HA_URL=http://10.0.20.5:8123
-HA_TOKEN=your_long_lived_access_token_here
-HA_ENTITY_ID=climate.my_ecobee
+# Ecobee
+ECOBEE_API_KEY=your_api_key_here
+ECOBEE_REFRESH_TOKEN=your_refresh_token_here
+ECOBEE_REFRESH_TOKEN=your_refresh_token_here
+ECOBEE_THERMOSTAT_INDEX=0  # 0 for first thermostat, 1 for second, etc.
+ECOBEE_MCP_URL=http://ecobee-mcp:8080
 
 # Ollama
 OLLAMA_URL=http://10.0.30.3:11434
@@ -161,13 +163,18 @@ LONGITUDE=-75.75
 TIMEZONE=America/Toronto
 ```
 
-### 3. Create Home Assistant Token
+### 3. Create Ecobee Credentials
 
-In Home Assistant:
-1. Go to your **Profile** (click your name in sidebar)
-2. Scroll to **Long-Lived Access Tokens**
-3. Click **Create Token**
-4. Copy the token to your `.env` file
+Direct Ecobee integration requires a one-time authorization to get your API keys.
+
+1. **Create App**: Log in to [Ecobee Developer Portal](https://www.ecobee.com/developers/), create a Consumer Key (Application). **Select "ecobee PIN" as the authorization method.** Copy the API Key.
+2. **Run Setup Script**:
+   ```bash
+   pip install requests
+   python3 servers/ecobee-mcp/tools/auth_setup.py <YOUR_API_KEY>
+   ```
+3. **Authorize**: Follow the script instructions to enter the PIN in "My Apps" on the Ecobee portal.
+4. **Update Config**: The script will output your `ECOBEE_REFRESH_TOKEN`. Add it and your API Key to `.env`.
 
 ### 4. Verify Ollama
 
@@ -208,7 +215,7 @@ mcp-iot-poc/
 │   │       ├── __init__.py
 │   │       └── server.py       # Open-Meteo API wrapper
 │   │
-│   └── homeassistant-mcp/      # Home Assistant MCP Server
+│   └── ecobee-mcp/      # Ecobee MCP Server
 │       ├── Dockerfile
 │       ├── pyproject.toml
 │       └── src/ha_mcp/
@@ -415,18 +422,17 @@ See `agent/src/climate_agent/main.py` for the full system prompt.
 
 ## 🐛 Troubleshooting
 
-### Agent can't connect to HA
+### Agent can't connect to Ecobee
 
 ```bash
-# Test from Docker network
-docker exec climate-agent curl -s http://10.0.20.5:8123/api/ \
-  -H "Authorization: Bearer YOUR_TOKEN"
+# Check ecobee-mcp logs for auth errors
+docker-compose logs ecobee-mcp
 ```
 
 Check:
-- HA_URL is correct and reachable
-- HA_TOKEN is valid
-- No firewall blocking the connection
+- `ECOBEE_API_KEY` and `ECOBEE_REFRESH_TOKEN` are correct
+- You authorized the app in the Ecobee portal
+- The token hasn't expired (the server auto-refreshes, but if it's been offline for weeks you might need to re-auth)
 
 ### Ollama not responding
 
@@ -443,7 +449,7 @@ docker exec ollama ollama list
 ```bash
 # Check individual server logs
 docker-compose logs weather-mcp
-docker-compose logs homeassistant-mcp
+docker-compose logs ecobee-mcp
 ```
 
 ### Database issues

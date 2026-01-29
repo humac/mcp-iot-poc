@@ -1,58 +1,47 @@
-version: '3.8'
-
 services:
   weather-mcp:
-    image: ghcr.io/humac/mcp-iot-poc-weather-mcp:latest
+    build:
+      context: ./servers/weather-mcp
+    image: mcp-iot-poc/weather-mcp:latest
     container_name: weather-mcp
     ports:
       - "8081:8080"
     environment:
-      - TZ=${TIMEZONE:-America/Toronto}
+      - PORT=8080
+      - LOG_LEVEL=INFO
       - LATITUDE=${LATITUDE:-45.35}
       - LONGITUDE=${LONGITUDE:-75.75}
       - TIMEZONE=${TIMEZONE:-America/Toronto}
-      - MCP_AUTH_TOKEN=${MCP_AUTH_TOKEN:-}
-    restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
     networks:
       - mcp-network
 
-  homeassistant-mcp:
-    image: ghcr.io/humac/mcp-iot-poc-homeassistant-mcp:latest
-    container_name: homeassistant-mcp
+  ecobee-mcp:
+    build:
+      context: ./servers/ecobee-mcp
+    image: mcp-iot-poc/ecobee-mcp:latest
+    container_name: ecobee-mcp
     ports:
       - "8082:8080"
     environment:
-      - TZ=${TIMEZONE:-America/Toronto}
-      - HA_URL=${HA_URL}
-      - HA_TOKEN=${HA_TOKEN}
-      - HA_ENTITY_ID=${HA_ENTITY_ID:-climate.my_ecobee}
-      - MCP_AUTH_TOKEN=${MCP_AUTH_TOKEN:-}
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
+      - PORT=8080
+      - LOG_LEVEL=INFO
+      - ECOBEE_API_KEY=${ECOBEE_API_KEY}
+      - ECOBEE_REFRESH_TOKEN=${ECOBEE_REFRESH_TOKEN}
+      - ECOBEE_THERMOSTAT_INDEX=${ECOBEE_THERMOSTAT_INDEX:-0}
+    volumes:
+      - ecobee-data:/app/data
     networks:
       - mcp-network
 
   agent:
-    image: ghcr.io/humac/mcp-iot-poc-climate-agent:latest
+    build:
+      context: ./agent
+    image: mcp-iot-poc/agent:latest
     container_name: climate-agent
     ports:
       - "8080:8080"
@@ -61,7 +50,7 @@ services:
       - OLLAMA_URL=${OLLAMA_URL}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:8b}
       - WEATHER_MCP_URL=http://weather-mcp:8080
-      - HA_MCP_URL=http://homeassistant-mcp:8080
+      - ECOBEE_MCP_URL=http://ecobee-mcp:8080
       - CHECK_INTERVAL_MINUTES=${CHECK_INTERVAL_MINUTES:-30}
       - MIN_TEMP=${MIN_TEMP:-17}
       - MAX_TEMP=${MAX_TEMP:-23}
@@ -77,7 +66,7 @@ services:
     depends_on:
       weather-mcp:
         condition: service_healthy
-      homeassistant-mcp:
+      ecobee-mcp:
         condition: service_healthy
     restart: unless-stopped
     deploy:
@@ -91,6 +80,8 @@ services:
 volumes:
   agent-data:
     name: climate-agent-data
+  ecobee-data:
+    name: ecobee-mcp-data
 
 networks:
   mcp-network:
