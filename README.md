@@ -199,6 +199,24 @@ docker-compose logs -f agent
 open http://localhost:8080
 ```
 
+### 6. Deployment Setup (Komodo)
+
+This project uses **Komodo** for automated deployments.
+
+1.  **Configure Webhook in Komodo**:
+    -   Go to the **"Repos"** (Repositories) section in Komodo.
+    -   Select the repository connected to this project.
+    -   Find the **Webhook URL** (usually under "Manage" or "Settings" for that Repo).
+    -   *Note: If you configured the Stack directly without a shared Repo resource, check the Stack's "Source" or "Git" settings tab.*
+
+2.  **Add Secret to GitHub**:
+    -   Go to Repository Settings → Secrets and variables → Actions.
+    -   Add a new repository secret:
+        -   Name: `KOMODO_WEBHOOK_URL`
+        -   Value: The URL you copied from Komodo.
+
+Now, every push to `main` will automatically trigger a deployment.
+
 ## 📁 Project Structure
 
 ```
